@@ -503,49 +503,165 @@ class PlantDetailsScreen extends ConsumerWidget {
     return _InteractiveScienceCard(
       glowColor: color,
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _glowIcon(icon, color),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        pet,
-                        style: const TextStyle(
-                          color: AppColors.pureWhite,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+          Row(
+            children: [
+              _glowIcon(icon, color),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  pet,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.pureWhite,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _riskBadge(emergency, color),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Severity: $severity',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _text(['pet_toxicity', path, 'symptoms'], fallback),
+            style: TextStyle(
+              color: AppColors.pureWhite.withOpacity(0.70),
+              height: 1.42,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _oxygenProductionCard() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 420;
+        final ring = _ScienceRing(
+          score: _photosynthesisScore,
+          color: AppColors.actionBlueOnDark,
+          label: 'O2',
+          size: compact ? 118 : 96,
+        );
+        final copy = Column(
+          crossAxisAlignment:
+              compact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+          children: [
+            _sectionEyebrow('Oxygen production'),
+            const SizedBox(height: 8),
+            Text(
+              _text(
+                [
+                  'environmental_intelligence',
+                  'oxygen',
+                  'estimated_daily_release'
+                ],
+                _oxygenOutput,
+              ),
+              textAlign: compact ? TextAlign.center : TextAlign.left,
+              style: TextStyle(
+                color: AppColors.pureWhite,
+                fontSize: compact ? 17 : 18,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
+        );
+
+        return Stack(
+          children: [
+            const Positioned.fill(child: _OxygenParticleField()),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: compact ? 8 : 0),
+              child: compact
+                  ? Column(
+                      children: [
+                        ring,
+                        const SizedBox(height: 18),
+                        copy,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        ring,
+                        const SizedBox(width: 18),
+                        Expanded(child: copy),
+                      ],
                     ),
-                    _riskBadge(emergency, color),
-                  ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _compactOxygenDetail(
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppColors.pureWhite.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: AppColors.pureWhite.withOpacity(0.08)),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Severity: $severity',
+                child: Icon(icon, color: AppColors.actionBlueOnDark, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
                   style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                    color: AppColors.pureWhite.withOpacity(0.58),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _text(['pet_toxicity', path, 'symptoms'], fallback),
-                  style: TextStyle(
-                    color: AppColors.pureWhite.withOpacity(0.70),
-                    height: 1.42,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.pureWhite,
+              fontSize: 15,
+              height: 1.42,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.1,
             ),
           ),
         ],
@@ -879,51 +995,7 @@ class PlantDetailsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  height: 170,
-                  child: Stack(
-                    children: [
-                      const Positioned.fill(child: _OxygenParticleField()),
-                      Row(
-                        children: [
-                          _ScienceRing(
-                            score: _photosynthesisScore,
-                            color: AppColors.actionBlueOnDark,
-                            label: 'O2',
-                            size: 96,
-                          ),
-                          const SizedBox(width: 18),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _sectionEyebrow('Oxygen production'),
-                                const SizedBox(height: 7),
-                                Text(
-                                  _text(
-                                    [
-                                      'environmental_intelligence',
-                                      'oxygen',
-                                      'estimated_daily_release'
-                                    ],
-                                    _oxygenOutput,
-                                  ),
-                                  style: const TextStyle(
-                                    color: AppColors.pureWhite,
-                                    fontSize: 18,
-                                    height: 1.35,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                _oxygenProductionCard(),
                 const SizedBox(height: 14),
                 _oxygenChart(),
                 const SizedBox(height: 16),
@@ -1502,19 +1574,21 @@ class PlantDetailsScreen extends ConsumerWidget {
 
   Widget _riskBadge(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withOpacity(0.24)),
       ),
       child: Text(
         label,
-        maxLines: 1,
+        maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: 12,
+          height: 1.25,
           fontWeight: FontWeight.w900,
         ),
       ),
