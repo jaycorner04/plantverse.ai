@@ -84,7 +84,7 @@ class HomeScreen extends StatelessWidget {
             ),
             _topIcon(LucideIcons.search),
             const SizedBox(width: 8),
-            _topIcon(LucideIcons.sparkles),
+            _topIcon(LucideIcons.leaf),
           ],
         ),
       ),
@@ -99,7 +99,7 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 26, 20, 20),
       child: Column(
         children: [
-          _capsule('AI nature operating system', LucideIcons.bot)
+          _capsule('Nature care operating system', LucideIcons.leaf)
               .animate(onPlay: (controller) => controller.repeat(reverse: true))
               .shimmer(
                 duration: 2400.ms,
@@ -119,7 +119,7 @@ class HomeScreen extends StatelessWidget {
           ).animate().fadeIn(duration: 800.ms).slideY(begin: 0.16, end: 0),
           const SizedBox(height: 18),
           Text(
-            'Identify plants, read care signals, and turn every leaf into a living AI profile with cinematic guidance.',
+            'Identify plants, read care signals, and turn every leaf into a living care profile with cinematic guidance.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.pureWhite.withOpacity(0.68),
@@ -141,9 +141,9 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () => context.push('/scanner'),
               ),
               _ghostPill(
-                icon: LucideIcons.messageCircle,
-                label: 'Ask AI',
-                onPressed: () => context.push('/ai_chatbot'),
+                icon: LucideIcons.stethoscope,
+                label: 'Plant Doctor',
+                onPressed: () => context.push('/ai_doctor'),
               ),
             ],
           ),
@@ -218,7 +218,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Live botanical intelligence, tuned for home growers.',
+                    'Live botanical guidance, tuned for home growers.',
                     style: TextStyle(
                       color: AppColors.pureWhite.withOpacity(0.88),
                       fontSize: 16,
@@ -261,7 +261,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(width: 14),
                 const Expanded(
                   child: Text(
-                    'AI scan chamber',
+                    'Scan chamber',
                     style: TextStyle(
                       color: AppColors.pureWhite,
                       fontSize: 24,
@@ -311,10 +311,10 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: _toolCard(
-                  title: 'Assistant',
-                  value: 'Care chat',
-                  icon: LucideIcons.sparkles,
-                  onTap: () => context.push('/ai_chatbot'),
+                  title: 'Care Guide',
+                  value: 'Plant health',
+                  icon: LucideIcons.leaf,
+                  onTap: () => context.push('/ai_doctor'),
                 ),
               ),
             ],
@@ -521,7 +521,7 @@ class HomeScreen extends StatelessWidget {
           Icon(LucideIcons.activity, color: AppColors.aiGlow, size: 16),
           SizedBox(width: 8),
           Text(
-            'AI confidence live',
+            'Scan confidence live',
             style: TextStyle(
               color: AppColors.pureWhite,
               fontSize: 13,

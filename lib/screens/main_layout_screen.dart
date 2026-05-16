@@ -12,8 +12,7 @@ class MainLayoutScreen extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/ai_doctor')) return 1;
-    if (location.startsWith('/ai_chatbot')) return 2;
-    if (location.startsWith('/garden')) return 3;
+    if (location.startsWith('/garden')) return 2;
     return 0;
   }
 
@@ -26,9 +25,6 @@ class MainLayoutScreen extends StatelessWidget {
         context.go('/ai_doctor');
         break;
       case 2:
-        context.go('/ai_chatbot');
-        break;
-      case 3:
         // context.go('/garden');
         break;
     }
@@ -61,9 +57,7 @@ class MainLayoutScreen extends StatelessWidget {
                     'Doctor'),
                 const SizedBox(width: 112), // Space for scan image button
                 _buildNavItem(
-                    context, 2, currentIndex, LucideIcons.sparkles, 'AI Chat'),
-                _buildNavItem(
-                    context, 3, currentIndex, LucideIcons.flower2, 'Garden'),
+                    context, 2, currentIndex, LucideIcons.flower2, 'Garden'),
               ],
             ),
           ),

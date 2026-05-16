@@ -130,29 +130,6 @@ Use confidence from 0 to 1.
     }
   }
 
-  Future<String> askBot(List<Map<String, String>> conversation) async {
-    if (!isConfigured) {
-      return 'PlantVerse is running in offline care mode because no Gemini API key is configured for this deployment. I can still give conservative care guidance: check soil before watering, use bright indirect light, isolate plants with pests, remove damaged leaves with clean tools, and retry AI analysis after adding a Gemini key.';
-    }
-
-    final transcript = conversation
-        .map((message) => '${message['role']}: ${message['content']}')
-        .join('\n');
-
-    try {
-      return await _generate(
-        prompt: '''
-You are PlantVerse AI, a careful botanical assistant. Give practical plant-care answers, ask for a photo when diagnosis is uncertain, and keep advice concise. Warn that severe toxicity or pesticide exposure needs a qualified professional.
-
-Conversation:
-$transcript
-''',
-      );
-    } on AiQuotaLimitException {
-      return 'Gemini free limit is temporarily reached, so I am answering in offline care mode. Keep advice conservative: check soil moisture before watering, give bright indirect light for most houseplants, remove damaged leaves with clean tools, isolate plants with pests, and wait before retrying AI analysis. Exact identification needs Gemini once the quota resets.';
-    }
-  }
-
   Future<String> _generate({
     required String prompt,
     Uint8List? imageBytes,

@@ -9,7 +9,6 @@ import '../../screens/home_screen.dart';
 import '../../screens/scanner_screen.dart';
 import '../../screens/plant_details_screen.dart';
 import '../../screens/ai_doctor_screen.dart';
-import '../../screens/ai_chatbot_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
@@ -68,12 +67,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             name: 'ai_doctor',
             parentNavigatorKey: _shellNavigatorKey,
             builder: (context, state) => const AiDoctorScreen(),
-          ),
-          GoRoute(
-            path: '/ai_chatbot',
-            name: 'ai_chatbot',
-            parentNavigatorKey: _shellNavigatorKey,
-            builder: (context, state) => const AiChatbotScreen(),
           ),
         ],
       ),
