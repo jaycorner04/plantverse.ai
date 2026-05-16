@@ -37,8 +37,8 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
     try {
       image = await _imagePicker.pickImage(
         source: source,
-        imageQuality: 86,
-        maxWidth: 1600,
+        imageQuality: 68,
+        maxWidth: 1024,
       );
     } on PlatformException catch (error) {
       _showPickerError(error.message ?? error.code);

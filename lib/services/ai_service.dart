@@ -18,11 +18,15 @@ class AiServiceException implements Exception {
   String toString() => message;
 }
 
+class AiQuotaLimitException extends AiServiceException {
+  const AiQuotaLimitException(super.message);
+}
+
 class AiService {
   String get _apiKey => dotenv.env['GEMINI_API_KEY']?.trim() ?? '';
   String get _model => dotenv.env['GEMINI_MODEL']?.trim().isNotEmpty == true
       ? dotenv.env['GEMINI_MODEL']!.trim()
-      : 'gemini-2.5-flash';
+      : 'gemini-2.0-flash-lite';
 
   bool get isConfigured => _apiKey.isNotEmpty;
 
@@ -30,8 +34,9 @@ class AiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
-    final text = await _generate(
-      prompt: '''
+    try {
+      final text = await _generate(
+        prompt: '''
 Identify the plant in this image. Return only valid JSON with:
 common_name, scientific_name, family, confidence, description, care_difficulty,
 native_region, toxicity_level, toxicity_score, water_requirement, water_score,
@@ -87,19 +92,23 @@ When exact values are unavailable, provide estimated ranges and explain the
 approximation logic. Do not diagnose serious human or animal medical issues;
 use first aid and vet/poison-control guidance for safety only.
 ''',
-      imageBytes: imageBytes,
-      fileName: fileName,
-    );
+        imageBytes: imageBytes,
+        fileName: fileName,
+      );
 
-    return _decodeObject(text);
+      return _decodeObject(text);
+    } on AiQuotaLimitException {
+      return _offlinePlantProfile();
+    }
   }
 
   Future<Map<String, dynamic>> diagnoseDisease({
     required Uint8List imageBytes,
     required String fileName,
   }) async {
-    final text = await _generate(
-      prompt: '''
+    try {
+      final text = await _generate(
+        prompt: '''
 Act as a plant care assistant. Analyze visible plant health symptoms in this image.
 Return only valid JSON with:
 diagnosis, confidence, severity, treatment, recovery_time, prevention, steps.
@@ -107,26 +116,33 @@ steps must be an array of 3 to 5 short actionable strings.
 If the photo is unclear, say so and recommend retaking the image.
 Use confidence from 0 to 1.
 ''',
-      imageBytes: imageBytes,
-      fileName: fileName,
-    );
+        imageBytes: imageBytes,
+        fileName: fileName,
+      );
 
-    return _decodeObject(text);
+      return _decodeObject(text);
+    } on AiQuotaLimitException {
+      return _offlineDiagnosis();
+    }
   }
 
-  Future<String> askBot(List<Map<String, String>> conversation) {
+  Future<String> askBot(List<Map<String, String>> conversation) async {
     final transcript = conversation
         .map((message) => '${message['role']}: ${message['content']}')
         .join('\n');
 
-    return _generate(
-      prompt: '''
+    try {
+      return await _generate(
+        prompt: '''
 You are PlantVerse AI, a careful botanical assistant. Give practical plant-care answers, ask for a photo when diagnosis is uncertain, and keep advice concise. Warn that severe toxicity or pesticide exposure needs a qualified professional.
 
 Conversation:
 $transcript
 ''',
-    );
+      );
+    } on AiQuotaLimitException {
+      return 'Gemini free limit is temporarily reached, so I am answering in offline care mode. Keep advice conservative: check soil moisture before watering, give bright indirect light for most houseplants, remove damaged leaves with clean tools, isolate plants with pests, and wait before retrying AI analysis. Exact identification needs Gemini once the quota resets.';
+    }
   }
 
   Future<String> _generate({
@@ -173,7 +189,11 @@ $transcript
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw AiServiceException(_geminiError(response));
+      final message = _geminiError(response);
+      if (_isQuotaLimit(response.statusCode, message)) {
+        throw AiQuotaLimitException(message);
+      }
+      throw AiServiceException(message);
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -242,6 +262,182 @@ $transcript
       // Fall back to the generic status message below.
     }
     return 'Gemini request failed with status ${response.statusCode}.';
+  }
+
+  bool _isQuotaLimit(int statusCode, String message) {
+    final lower = message.toLowerCase();
+    return statusCode == 429 ||
+        lower.contains('resource_exhausted') ||
+        lower.contains('quota') ||
+        lower.contains('rate limit') ||
+        lower.contains('too many requests');
+  }
+
+  Map<String, dynamic> _offlinePlantProfile() {
+    return {
+      'common_name': 'Plant scan saved',
+      'scientific_name': 'AI limit reached',
+      'family': 'Offline estimate',
+      'confidence': 0.48,
+      'description':
+          'Gemini free quota is temporarily exhausted, so PlantVerse is showing a conservative offline plant profile. Retry later for exact species identification.',
+      'care_difficulty': 'Moderate until identified',
+      'native_region': 'Unknown until AI retry',
+      'toxicity_level': 'Unknown - keep away from pets and children',
+      'toxicity_score': 0.45,
+      'water_requirement': 'Check top soil before watering',
+      'water_score': 0.52,
+      'sunlight_requirement': 'Bright indirect light is safest',
+      'sunlight_score': 0.62,
+      'temperature_range': '18-30 C',
+      'humidity_level': 'Average indoor humidity',
+      'humidity_score': 0.50,
+      'photosynthesis_score': 0.56,
+      'oxygen_output':
+          'Offline estimate: a small indoor plant may release a modest amount of oxygen during bright daylight, but exact output depends on species, leaf area, light, and health.',
+      'air_intake': 'Carbon dioxide, light energy, and water.',
+      'air_release': 'Oxygen and water vapor during daylight photosynthesis.',
+      'health_summary':
+          'Limit-safe offline mode is active. The photo is saved, but exact AI species analysis needs a later retry.',
+      'story_markdown':
+          'Your plant is waiting in offline mode while the free Gemini quota resets. For now, treat it gently: bright indirect light, careful watering only when the top soil dries, and no pet or child access until toxicity is confirmed.',
+      'human_toxicity': {
+        'level': 'Unknown',
+        'severity_score': 0.45,
+        'touch_effects':
+            'Avoid sap contact until the species is confirmed. Wash hands after handling.',
+        'ingestion_effects':
+            'Do not ingest unidentified plant material. Contact poison control if symptoms appear.',
+        'skin_irritation': 'Sensitive skin may react to sap or leaf residue.',
+        'child_warning':
+            'Keep the plant out of reach of children until identification is confirmed.',
+        'first_aid':
+            'Rinse mouth or skin, remove plant residue, and seek qualified help if symptoms occur.'
+      },
+      'pet_toxicity': {
+        'cats': {
+          'severity': 'Unknown',
+          'symptoms':
+              'Watch for drooling, vomiting, lethargy, or appetite loss.',
+          'emergency_level': 'Monitor closely'
+        },
+        'dogs': {
+          'severity': 'Unknown',
+          'symptoms':
+              'Watch for mouth irritation, vomiting, diarrhea, or lethargy.',
+          'emergency_level': 'Monitor closely'
+        },
+        'birds': {
+          'severity': 'Unknown',
+          'symptoms':
+              'Birds can be sensitive to plant chemicals; avoid cage access.',
+          'emergency_level': 'Avoid exposure'
+        }
+      },
+      'toxic_compounds': {
+        'summary':
+            'Unknown until species identification is available. Treat as potentially irritating.',
+        'harmful_compounds': 'Not confirmed',
+        'alkaloids': 'Not confirmed',
+        'oxalates': 'Not confirmed',
+        'latex': 'Not confirmed',
+        'sap_chemicals': 'Not confirmed'
+      },
+      'care_intelligence': {
+        'water': {
+          'score': 0.52,
+          'ideal_frequency': 'Water only when the top soil begins to dry.',
+          'amount_estimation': 'Moisten evenly, then drain excess water.',
+          'overwatering_risk': 'High if soil stays wet for many days.',
+          'underwatering_symptoms': 'Wilting, curling, dry edges, slow growth.',
+          'seasonal_changes': 'Water less in cool or low-light months.',
+          'soil_moisture_preference': 'Slightly dry top layer before watering.'
+        },
+        'sunlight': {
+          'score': 0.62,
+          'direct_tolerance':
+              'Avoid harsh afternoon sun until species is known.',
+          'indirect_preference': 'Bright indirect light is safest.',
+          'indoor_compatibility': 'Likely suitable near a bright window.',
+          'outdoor_compatibility': 'Move outdoors gradually if needed.',
+          'best_window_direction': 'East or filtered south/west light.',
+          'heat_tolerance': 'Avoid heat stress above normal indoor conditions.'
+        },
+        'humidity': {
+          'score': 0.50,
+          'ideal_humidity': 'Average indoor humidity.',
+          'dry_climate_tolerance': 'Monitor for crisp leaf edges.',
+          'misting_recommendations':
+              'Avoid heavy misting unless species needs it.',
+          'ac_room_compatibility': 'Keep away from strong AC drafts.'
+        },
+        'temperature': {
+          'score': 0.60,
+          'minimum_temperature': 'Keep above 15 C.',
+          'maximum_temperature': 'Avoid sustained heat above 32 C.',
+          'best_growth_temperature': '18-30 C.',
+          'winter_survival': 'Protect from cold windows and drafts.'
+        }
+      },
+      'environmental_intelligence': {
+        'oxygen': {
+          'score': 0.56,
+          'estimated_daily_release':
+              'Small indoor oxygen contribution during bright daylight; exact liters vary by species and leaf area.',
+          'day_vs_night':
+              'Oxygen release rises in daylight and drops at night while respiration continues.',
+          'air_purification_score': 0.38,
+          'indoor_contribution':
+              'Best seen as a small wellness contribution, not a room-scale oxygen source.',
+          'nasa_clean_air_relevance':
+              'Clean-air relevance cannot be confirmed until species is identified.',
+          'photosynthesis_efficiency':
+              'Moderate estimate in bright indirect light.',
+          'approximation_logic':
+              'Based on generic indoor plant behavior because Gemini quota was reached.'
+        },
+        'co2': {
+          'score': 0.54,
+          'estimated_daily_absorption':
+              'Small carbon dioxide uptake during active daylight photosynthesis.',
+          'photosynthesis_cycle':
+              'CO2 is absorbed through stomata when light and water are available.',
+          'carbon_capture_efficiency': 'Modest indoors.',
+          'indoor_air_improvement':
+              'Helpful as part of a planted space, but ventilation matters more.'
+        },
+        'biology': {
+          'photosynthesis_type': 'Unknown until identification',
+          'transpiration_details':
+              'Leaves may release water vapor depending on humidity and light.',
+          'root_oxygen_exchange':
+              'Roots need oxygen pockets; saturated soil can suffocate tissue.',
+          'growth_respiration_details':
+              'Plants respire day and night for growth and repair.'
+        }
+      }
+    };
+  }
+
+  Map<String, dynamic> _offlineDiagnosis() {
+    return {
+      'diagnosis': 'Limit-safe offline plant health review',
+      'confidence': 0.42,
+      'severity': 'Unknown until AI retry',
+      'treatment':
+          'Gemini free quota is temporarily reached. For now, isolate the plant, remove badly damaged leaves with clean tools, check for pests under leaves, and avoid overwatering.',
+      'recovery_time':
+          'Retry AI scan after quota resets for a better estimate.',
+      'prevention':
+          'Use bright indirect light, good airflow, clean pruning tools, and water only after checking soil moisture.',
+      'steps': [
+        'Move the plant to bright indirect light.',
+        'Check soil moisture before watering.',
+        'Inspect leaf undersides for pests or spots.',
+        'Remove dead or infected leaves with clean scissors.',
+        'Retry AI diagnosis later when the free quota resets.'
+      ],
+    };
   }
 
   String _mimeType(String fileName) {
