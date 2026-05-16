@@ -34,6 +34,8 @@ class AiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
+    if (!isConfigured) return _offlinePlantProfile();
+
     try {
       final text = await _generate(
         prompt: '''
@@ -106,6 +108,8 @@ use first aid and vet/poison-control guidance for safety only.
     required Uint8List imageBytes,
     required String fileName,
   }) async {
+    if (!isConfigured) return _offlineDiagnosis();
+
     try {
       final text = await _generate(
         prompt: '''
@@ -127,6 +131,10 @@ Use confidence from 0 to 1.
   }
 
   Future<String> askBot(List<Map<String, String>> conversation) async {
+    if (!isConfigured) {
+      return 'PlantVerse is running in offline care mode because no Gemini API key is configured for this deployment. I can still give conservative care guidance: check soil before watering, use bright indirect light, isolate plants with pests, remove damaged leaves with clean tools, and retry AI analysis after adding a Gemini key.';
+    }
+
     final transcript = conversation
         .map((message) => '${message['role']}: ${message['content']}')
         .join('\n');
