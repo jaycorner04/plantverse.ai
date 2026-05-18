@@ -25,11 +25,22 @@ class AiQuotaLimitException extends AiServiceException {
 }
 
 class AiService {
+  static const _definedApiKey = String.fromEnvironment('GEMINI_API_KEY');
+  static const _definedModel = String.fromEnvironment('GEMINI_MODEL');
+
   Map<String, String> get _env => dotenv.isInitialized ? dotenv.env : const {};
-  String get _apiKey => _env['GEMINI_API_KEY']?.trim() ?? '';
-  String get _model => _env['GEMINI_MODEL']?.trim().isNotEmpty == true
-      ? _env['GEMINI_MODEL']!.trim()
-      : 'gemini-2.0-flash-lite';
+  String get _apiKey {
+    final runtimeKey = _env['GEMINI_API_KEY']?.trim() ?? '';
+    if (runtimeKey.isNotEmpty) return runtimeKey;
+    return _definedApiKey.trim();
+  }
+
+  String get _model {
+    final runtimeModel = _env['GEMINI_MODEL']?.trim() ?? '';
+    if (runtimeModel.isNotEmpty) return runtimeModel;
+    final definedModel = _definedModel.trim();
+    return definedModel.isNotEmpty ? definedModel : 'gemini-2.0-flash-lite';
+  }
 
   bool get isConfigured => _apiKey.isNotEmpty;
 
@@ -103,7 +114,9 @@ use first aid and vet/poison-control guidance for safety only.
         fileName: fileName,
       );
 
-      return _decodeObject(text);
+      final result = _decodeObject(text);
+      result.putIfAbsent('recognition_mode', () => 'live_ai');
+      return result;
     } on AiServiceException {
       return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
     } catch (_) {
@@ -285,12 +298,13 @@ Use confidence from 0 to 1.
 
   Map<String, dynamic> _offlinePlantProfile() {
     return {
-      'common_name': 'Plant scan saved',
-      'scientific_name': 'AI limit reached',
+      'common_name': 'Unconfirmed plant',
+      'scientific_name': 'Species not confirmed offline',
       'family': 'Offline estimate',
-      'confidence': 0.48,
+      'confidence': 0.28,
+      'recognition_mode': 'offline_general',
       'description':
-          'PlantVerse Free Mode is active, so this scan uses an offline care profile instead of paid cloud AI. Add your own Gemini key later only if you want exact species recognition.',
+          'PlantVerse Free Mode is active and no reliable local catalog match was found. This is safe general plant-care guidance, not an exact species identification. Live AI is used first whenever a Gemini key is configured; this fallback appears when no key, quota limit, or API failure is reached.',
       'care_difficulty': 'Moderate until identified',
       'native_region': 'Unknown in free offline mode',
       'toxicity_level': 'Unknown - keep away from pets and children',
@@ -308,7 +322,7 @@ Use confidence from 0 to 1.
       'air_intake': 'Carbon dioxide, light energy, and water.',
       'air_release': 'Oxygen and water vapor during daylight photosynthesis.',
       'health_summary':
-          'Free offline mode is active. The photo is saved, and PlantVerse is showing safe general plant-care intelligence without using paid cloud AI.',
+          'Free offline mode is active. To avoid wrong species facts, PlantVerse is showing conservative general plant-care intelligence instead of forcing an uncertain plant name.',
       'story_markdown':
           'Your plant is running in Free Mode. Treat it gently: bright indirect light, careful watering only when the top soil dries, and no pet or child access until exact toxicity is confirmed.',
       'human_toxicity': {

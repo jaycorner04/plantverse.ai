@@ -332,8 +332,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       _errorMessage ??
                           _status ??
                           (aiReady
-                              ? 'Take a clear photo of leaves, stem, and pot.'
-                              : 'Free mode: scan works without API limits using offline plant-care intelligence.'),
+                              ? 'Live AI identifies first. If quota/API fails, PlantVerse falls back to safe free mode.'
+                              : 'Free mode gives safe care guidance and catalog matches only when reliable.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: _errorMessage == null

@@ -6,10 +6,13 @@ class OfflinePlantCatalog {
     required String fileName,
   }) {
     final plant = _matchPlant(imageBytes: imageBytes, fileName: fileName);
+    if (plant == null) {
+      throw StateError('No reliable offline catalog match.');
+    }
     return _profile(plant);
   }
 
-  static _OfflinePlant _matchPlant({
+  static _OfflinePlant? _matchPlant({
     required Uint8List imageBytes,
     required String fileName,
   }) {
@@ -19,15 +22,7 @@ class OfflinePlantCatalog {
         if (lowerName.contains(keyword)) return plant;
       }
     }
-
-    var hash = imageBytes.length;
-    if (imageBytes.isNotEmpty) {
-      final stride = (imageBytes.length ~/ 96).clamp(1, 4096);
-      for (var index = 0; index < imageBytes.length; index += stride) {
-        hash = 0x1fffffff & (hash * 31 + imageBytes[index]);
-      }
-    }
-    return _plants[hash % _plants.length];
+    return null;
   }
 
   static Map<String, dynamic> _profile(_OfflinePlant plant) {
@@ -42,8 +37,9 @@ class OfflinePlantCatalog {
       'scientific_name': plant.scientificName,
       'family': plant.family,
       'confidence': plant.confidence,
+      'recognition_mode': 'offline_catalog',
       'description':
-          'Free offline match from PlantVerse local catalog. This profile is strongest for common houseplants and gives real species care, toxicity, and biology guidance without paid cloud AI.',
+          'Free offline catalog match from the image file signal. This profile gives species care, toxicity, and biology guidance without paid cloud AI. If the photo itself needs visual recognition, live Gemini is more accurate.',
       'care_difficulty': plant.careDifficulty,
       'native_region': plant.nativeRegion,
       'toxicity_level': plant.humanLevel,
@@ -443,6 +439,102 @@ class OfflinePlantCatalog {
       transpiration:
           'Moderate transpiration; responds visibly to water stress.',
       rootOxygen: 'Roots need moist but oxygenated soil.',
+    ),
+    const _OfflinePlant(
+      commonName: 'Rubber Plant',
+      scientificName: 'Ficus elastica',
+      family: 'Moraceae',
+      keywords: [
+        'rubber',
+        'ficus',
+        'elastica',
+        'burgundy',
+        'tineke',
+        'robusta'
+      ],
+      confidence: 0.82,
+      careDifficulty: 'Beginner to intermediate',
+      nativeRegion: 'Eastern Himalayas and Southeast Asia',
+      humanLevel: 'Mild to moderate irritation from sap or ingestion',
+      toxicityScore: 0.58,
+      touchEffects:
+          'Leaves are usually safe to handle, but milky latex sap can irritate skin.',
+      ingestionEffects:
+          'Chewing may cause mouth irritation, stomach upset, nausea, or vomiting.',
+      skinIrritation:
+          'Latex sap may irritate sensitive skin and can bother latex-sensitive people.',
+      childWarning: 'Keep pruned stems and fallen leaves away from children.',
+      catSeverity: 'Moderate',
+      dogSeverity: 'Moderate',
+      birdSeverity: 'Caution',
+      petSymptoms:
+          'Drooling, oral irritation, vomiting, reduced appetite, or pawing at mouth.',
+      birdSymptoms:
+          'Avoid chewing exposure; sticky sap may irritate mouth or crop tissue.',
+      petEmergency: 'Vet guidance recommended if eaten',
+      birdEmergency: 'Avoid exposure',
+      compoundSummary:
+          'Produces a milky latex sap with irritating ficus compounds and proteolytic enzymes.',
+      harmfulCompounds: 'Ficus latex, ficin-like proteolytic enzymes',
+      alkaloids: 'Not commonly reported as the main concern',
+      oxalates: 'Not the main reported household risk',
+      latex: 'Present; milky sap is the main irritant',
+      sapChemicals: 'Latex proteins, resins, and irritating enzymes',
+      waterFrequency: 'Water every 7-14 days when the top 3-5 cm dries.',
+      waterAmount:
+          'Water thoroughly until runoff, then empty the saucer completely.',
+      overwateringRisk:
+          'Moderate to high; yellowing lower leaves and leaf drop can follow soggy soil.',
+      underwateringSymptoms:
+          'Drooping leaves, curling edges, dry soil gap, and slower new growth.',
+      soilPreference:
+          'Airy well-draining potting mix with perlite or bark for root oxygen.',
+      waterScore: 0.54,
+      lightPreference:
+          'Bright indirect light keeps leaves glossy and growth compact.',
+      sunlightScore: 0.66,
+      directTolerance:
+          'Can take gentle morning sun; harsh afternoon sun may scorch leaves.',
+      indoorCompatibility:
+          'Excellent indoor tree if given a bright window and stable warmth.',
+      outdoorCompatibility:
+          'Warm shaded patios only; protect from cold and sudden direct sun.',
+      bestWindow: 'East window or filtered south/west window.',
+      heatTolerance:
+          'Good warmth tolerance if humidity and soil moisture are stable.',
+      humidity: '40-60% humidity preferred.',
+      humidityScore: 0.52,
+      dryClimateTolerance:
+          'Tolerates normal homes, but very dry air can brown edges.',
+      misting:
+          'Wipe leaves with a damp cloth; use a humidifier rather than heavy misting.',
+      acCompatibility:
+          'Avoid direct cold AC drafts and sudden temperature dips.',
+      temperatureRange: '18-30 C',
+      temperatureScore: 0.74,
+      minimumTemperature: 'Keep above 13-15 C.',
+      maximumTemperature: 'Avoid sustained heat above 35 C indoors.',
+      winterSurvival:
+          'Indoor protection required in winter; reduce watering in low light.',
+      photosynthesisScore: 0.72,
+      oxygenEstimate:
+          'roughly 6-16 mL oxygen/hour for a healthy indoor specimen in bright light',
+      airPurificationScore: 0.64,
+      indoorAirContribution:
+          'Broad glossy leaves add modest gas exchange and transpiration to a room.',
+      nasaRelevance:
+          'Ficus-type houseplants are often discussed in indoor air plant lists, but ventilation matters more.',
+      photosynthesisEfficiency:
+          'Good in bright indirect light because large leaves capture light efficiently.',
+      co2Score: 0.68,
+      co2Estimate:
+          'small to moderate daylight CO2 uptake depending on leaf area and light',
+      carbonEfficiency: 'Moderate for a broad-leaf indoor tree',
+      photosynthesisType: 'C3 photosynthesis',
+      transpiration:
+          'Moderate transpiration through broad leaves; humidity helps reduce edge stress.',
+      rootOxygen:
+          'Roots need air spaces; dense wet soil can trigger leaf drop and root decline.',
     ),
     const _OfflinePlant(
       commonName: 'Aloe Vera',

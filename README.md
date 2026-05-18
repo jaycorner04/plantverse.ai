@@ -40,9 +40,22 @@ because of API quota. This free mode can show likely plant names, scientific
 names, care guidance, toxicity warnings, pet safety, watering, light, humidity,
 temperature, and general plant-health steps.
 
-Free mode uses filename hints when available and a local image fingerprint when
-there is no hint. It is useful offline, but live Gemini recognition is still
-more accurate for exact species ID from photos.
+Free mode uses local catalog signals when available. When there is no reliable
+offline match, PlantVerse shows conservative general care guidance instead of
+forcing a wrong species name. Live Gemini recognition is still more accurate for
+exact species ID from photos.
+
+For personal builds, you can pass Gemini at build/run time without bundling a
+`.env` asset:
+
+```bash
+flutter run --dart-define=GEMINI_API_KEY=your_key
+flutter build apk --release --dart-define=GEMINI_API_KEY=your_key
+```
+
+When a Gemini key is configured, the app tries live AI first. If quota, rate
+limit, or API failure is reached, it automatically falls back to free offline
+mode.
 
 For exact cloud species recognition and photo-specific diagnosis, add your own
 Gemini API key in a local `.env` file:

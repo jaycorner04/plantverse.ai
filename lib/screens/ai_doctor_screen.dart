@@ -150,8 +150,8 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
           const SizedBox(height: 10),
           Text(
             aiReady
-                ? 'Upload leaves, stems, soil, or roots. The AI will return symptoms, treatment, and prevention steps.'
-                : 'Free mode works without API limits. Upload a plant photo for offline care guidance; add your own Gemini key later only for exact cloud diagnosis.',
+                ? 'Upload leaves, stems, soil, or roots. Live AI runs first; if quota/API fails, free mode gives conservative care steps.'
+                : 'Free mode gives conservative offline care guidance without forcing an uncertain diagnosis.',
             style: TextStyle(
               fontSize: 17,
               height: 1.45,

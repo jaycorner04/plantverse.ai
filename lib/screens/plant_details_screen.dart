@@ -73,6 +73,13 @@ class PlantDetailsScreen extends ConsumerWidget {
   String get _nativeRegion => _value('native_region', 'Native region unknown');
   String get _temperatureRange => _value('temperature_range', '18-30 C');
   String get _humidityLevel => _value('humidity_level', 'Moderate humidity');
+  String get _recognitionMode => _value('recognition_mode', 'live_ai');
+  String get _confidenceLabel {
+    if (_recognitionMode == 'offline_general') return 'General fallback';
+    if (_recognitionMode == 'offline_catalog') return 'Offline catalog';
+    return '${(_confidence * 100).toStringAsFixed(0)}% AI confidence';
+  }
+
   String get _oxygenOutput => _value(
         'oxygen_output',
         'Small but steady oxygen contribution while leaves receive enough light; exact output varies with plant size and health.',
@@ -210,7 +217,7 @@ class PlantDetailsScreen extends ConsumerWidget {
                   children: [
                     _glassChip(
                       LucideIcons.sparkles,
-                      '${(_confidence * 100).toStringAsFixed(0)}% AI confidence',
+                      _confidenceLabel,
                     ),
                     _glassChip(LucideIcons.leaf, _family),
                     _glassChip(
@@ -313,7 +320,7 @@ class PlantDetailsScreen extends ConsumerWidget {
                 _sectionEyebrow('Scan interpretation'),
                 const SizedBox(height: 7),
                 const Text(
-                  'Living plant signal',
+                  'Scan interpretation',
                   style: TextStyle(
                     color: AppColors.pureWhite,
                     fontSize: 22,
