@@ -35,9 +35,14 @@ flutter run
 ### 4.1 Free Mode and Optional Live AI
 
 The app works without a Gemini key. In free mode, scans and plant doctor use
-offline plant-care guidance so the APK does not stop because of API quota.
-This free mode is useful for personal care guidance, safety reminders, watering,
-light, humidity, and general plant-health steps.
+an embedded offline catalog for common houseplants, so the APK does not stop
+because of API quota. This free mode can show likely plant names, scientific
+names, care guidance, toxicity warnings, pet safety, watering, light, humidity,
+temperature, and general plant-health steps.
+
+Free mode uses filename hints when available and a local image fingerprint when
+there is no hint. It is useful offline, but live Gemini recognition is still
+more accurate for exact species ID from photos.
 
 For exact cloud species recognition and photo-specific diagnosis, add your own
 Gemini API key in a local `.env` file:

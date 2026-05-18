@@ -5,6 +5,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import 'offline_plant_catalog.dart';
+
 final aiServiceProvider = Provider<AiService>((ref) {
   return AiService();
 });
@@ -34,7 +36,9 @@ class AiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
-    if (!isConfigured) return _offlinePlantProfile();
+    if (!isConfigured) {
+      return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
+    }
 
     try {
       final text = await _generate(
@@ -100,9 +104,9 @@ use first aid and vet/poison-control guidance for safety only.
 
       return _decodeObject(text);
     } on AiServiceException {
-      return _offlinePlantProfile();
+      return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
     } catch (_) {
-      return _offlinePlantProfile();
+      return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
     }
   }
 
@@ -110,7 +114,9 @@ use first aid and vet/poison-control guidance for safety only.
     required Uint8List imageBytes,
     required String fileName,
   }) async {
-    if (!isConfigured) return _offlineDiagnosis();
+    if (!isConfigured) {
+      return _offlineDiagnosis(imageBytes: imageBytes, fileName: fileName);
+    }
 
     try {
       final text = await _generate(
@@ -128,9 +134,9 @@ Use confidence from 0 to 1.
 
       return _decodeObject(text);
     } on AiServiceException {
-      return _offlineDiagnosis();
+      return _offlineDiagnosis(imageBytes: imageBytes, fileName: fileName);
     } catch (_) {
-      return _offlineDiagnosis();
+      return _offlineDiagnosis(imageBytes: imageBytes, fileName: fileName);
     }
   }
 
@@ -260,6 +266,20 @@ Use confidence from 0 to 1.
         lower.contains('quota') ||
         lower.contains('rate limit') ||
         lower.contains('too many requests');
+  }
+
+  Map<String, dynamic> _offlineCatalogProfile({
+    required Uint8List imageBytes,
+    required String fileName,
+  }) {
+    try {
+      return OfflinePlantCatalog.identify(
+        imageBytes: imageBytes,
+        fileName: fileName,
+      );
+    } catch (_) {
+      return _offlinePlantProfile();
+    }
   }
 
   Map<String, dynamic> _offlinePlantProfile() {
@@ -408,13 +428,27 @@ Use confidence from 0 to 1.
     };
   }
 
-  Map<String, dynamic> _offlineDiagnosis() {
+  Map<String, dynamic> _offlineDiagnosis({
+    required Uint8List imageBytes,
+    required String fileName,
+  }) {
+    var plantName = 'your plant';
+    try {
+      final plant = OfflinePlantCatalog.identify(
+        imageBytes: imageBytes,
+        fileName: fileName,
+      );
+      plantName = plant['common_name']?.toString() ?? plantName;
+    } catch (_) {
+      // Keep the generic label if the offline catalog cannot match.
+    }
+
     return {
-      'diagnosis': 'Limit-safe offline plant health review',
+      'diagnosis': 'Offline health review for $plantName',
       'confidence': 0.42,
       'severity': 'Unknown in free offline mode',
       'treatment':
-          'PlantVerse Free Mode is active. For now, isolate the plant, remove badly damaged leaves with clean tools, check for pests under leaves, and avoid overwatering.',
+          'PlantVerse Free Mode is active. For $plantName, isolate the plant, remove badly damaged leaves with clean tools, check for pests under leaves, and avoid overwatering.',
       'recovery_time':
           'Add your own Gemini key later if you want a photo-specific cloud AI estimate.',
       'prevention':
