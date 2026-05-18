@@ -436,15 +436,14 @@ Use confidence from 0 to 1.
     required String fallbackReason,
   }) async {
     final response = await http.post(
-      Uri.parse('https://api.plant.id/v3/identification'),
+      Uri.parse('https://api.plant.id/v2/identify'),
       headers: {
         'Content-Type': 'application/json',
         'Api-Key': _plantIdApiKey,
       },
       body: jsonEncode({
         'images': [base64Encode(imageBytes)],
-        'similar_images': false,
-        'classification_level': 'species',
+        'plant_details': ['common_names', 'url', 'taxonomy'],
       }),
     );
 
@@ -455,10 +454,7 @@ Use confidence from 0 to 1.
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final result = data['result'];
-    final classification = result is Map ? result['classification'] : null;
-    final suggestions =
-        classification is Map ? classification['suggestions'] : null;
+    final suggestions = data['suggestions'];
     if (suggestions is! List ||
         suggestions.isEmpty ||
         suggestions.first is! Map) {
@@ -466,11 +462,12 @@ Use confidence from 0 to 1.
     }
 
     final top = (suggestions.first as Map).cast<String, dynamic>();
-    final scientificName = _cleanText(top['name']);
+    final scientificName = _cleanText(top['plant_name']);
     if (scientificName.isEmpty) {
       throw const AiServiceException('Plant.id returned no scientific name.');
     }
-    final details = (top['details'] as Map?)?.cast<String, dynamic>() ?? {};
+    final details =
+        (top['plant_details'] as Map?)?.cast<String, dynamic>() ?? {};
     final commonNames = details['common_names'] is List
         ? (details['common_names'] as List)
             .map((item) => item.toString().trim())
