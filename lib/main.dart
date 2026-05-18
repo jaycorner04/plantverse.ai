@@ -8,9 +8,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await dotenv.load(fileName: '.env');
+    await dotenv.load(fileName: '.env', isOptional: true);
   } catch (_) {
     // Free offline mode works without bundled environment keys.
+    dotenv.testLoad();
   }
 
   runApp(

@@ -25,9 +25,10 @@ class AiQuotaLimitException extends AiServiceException {
 }
 
 class AiService {
-  String get _apiKey => dotenv.env['GEMINI_API_KEY']?.trim() ?? '';
-  String get _model => dotenv.env['GEMINI_MODEL']?.trim().isNotEmpty == true
-      ? dotenv.env['GEMINI_MODEL']!.trim()
+  Map<String, String> get _env => dotenv.isInitialized ? dotenv.env : const {};
+  String get _apiKey => _env['GEMINI_API_KEY']?.trim() ?? '';
+  String get _model => _env['GEMINI_MODEL']?.trim().isNotEmpty == true
+      ? _env['GEMINI_MODEL']!.trim()
       : 'gemini-2.0-flash-lite';
 
   bool get isConfigured => _apiKey.isNotEmpty;
