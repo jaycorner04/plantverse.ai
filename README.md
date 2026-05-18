@@ -45,6 +45,13 @@ offline match, PlantVerse shows conservative general care guidance instead of
 forcing a wrong species name. Live Gemini recognition is still more accurate for
 exact species ID from photos.
 
+The APK also includes a 10,000-record offline vascular-plant taxonomy index
+generated from the GBIF Backbone Taxonomy. This lets free mode remember many
+scientific plant names, families, genera, and taxonomy references when a clear
+name signal is available. Taxonomy-only matches do not invent care or toxicity:
+they show identity/classification and conservative safety guidance until a
+source-backed care profile is added.
+
 For personal builds, you can pass Gemini at build/run time without bundling a
 `.env` asset:
 

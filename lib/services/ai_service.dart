@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import 'offline_plant_catalog.dart';
+import 'plant_taxonomy_index.dart';
 
 final aiServiceProvider = Provider<AiService>((ref) {
   return AiService();
@@ -282,16 +283,22 @@ Use confidence from 0 to 1.
         lower.contains('too many requests');
   }
 
-  Map<String, dynamic> _offlineCatalogProfile({
+  Future<Map<String, dynamic>> _offlineCatalogProfile({
     required Uint8List imageBytes,
     required String fileName,
-  }) {
+  }) async {
     try {
       return OfflinePlantCatalog.identify(
         imageBytes: imageBytes,
         fileName: fileName,
       );
     } catch (_) {
+      final taxonomyRecord = await PlantTaxonomyIndex.matchByNameSignal(
+        fileName,
+      );
+      if (taxonomyRecord != null) {
+        return PlantTaxonomyIndex.taxonomyProfile(taxonomyRecord);
+      }
       return _offlinePlantProfile();
     }
   }
@@ -448,10 +455,10 @@ Use confidence from 0 to 1.
     };
   }
 
-  Map<String, dynamic> _offlineDiagnosis({
+  Future<Map<String, dynamic>> _offlineDiagnosis({
     required Uint8List imageBytes,
     required String fileName,
-  }) {
+  }) async {
     var plantName = 'your plant';
     try {
       final plant = OfflinePlantCatalog.identify(
@@ -460,7 +467,12 @@ Use confidence from 0 to 1.
       );
       plantName = plant['common_name']?.toString() ?? plantName;
     } catch (_) {
-      // Keep the generic label if the offline catalog cannot match.
+      final taxonomyRecord = await PlantTaxonomyIndex.matchByNameSignal(
+        fileName,
+      );
+      if (taxonomyRecord != null) {
+        plantName = taxonomyRecord['canonicalName']?.toString() ?? plantName;
+      }
     }
 
     return {

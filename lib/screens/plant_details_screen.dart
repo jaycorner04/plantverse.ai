@@ -86,6 +86,7 @@ class PlantDetailsScreen extends ConsumerWidget {
   String get _confidenceLabel {
     if (_recognitionMode == 'offline_general') return 'General fallback';
     if (_recognitionMode == 'offline_catalog') return 'Offline catalog';
+    if (_recognitionMode == 'offline_taxonomy') return '10k taxonomy';
     return '${(_confidence * 100).toStringAsFixed(0)}% AI confidence';
   }
 
