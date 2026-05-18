@@ -83,6 +83,7 @@ class PlantDetailsScreen extends ConsumerWidget {
   String get _temperatureRange => _value('temperature_range', '18-30 C');
   String get _humidityLevel => _value('humidity_level', 'Moderate humidity');
   String get _recognitionMode => _value('recognition_mode', 'live_ai');
+  String get _fallbackReason => _value('fallback_reason', '');
   String get _confidenceLabel {
     if (_recognitionMode == 'offline_general') return 'General fallback';
     if (_recognitionMode == 'offline_catalog') return 'Offline catalog';
@@ -358,6 +359,19 @@ class PlantDetailsScreen extends ConsumerWidget {
                     height: 1.42,
                   ),
                 ),
+                if (_fallbackReason.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _fallbackReason,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.warningYellow.withOpacity(0.92),
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

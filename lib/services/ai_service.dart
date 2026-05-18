@@ -50,7 +50,11 @@ class AiService {
     required String fileName,
   }) async {
     if (!isConfigured) {
-      return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
+      return _offlineCatalogProfile(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: 'No Gemini key is configured.',
+      );
     }
 
     try {
@@ -118,8 +122,12 @@ use first aid and vet/poison-control guidance for safety only.
       final result = _decodeObject(text);
       result.putIfAbsent('recognition_mode', () => 'live_ai');
       return result;
-    } on AiQuotaLimitException {
-      return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
+    } on AiQuotaLimitException catch (error) {
+      return _offlineCatalogProfile(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: 'Gemini limit reached. ${error.message}',
+      );
     }
   }
 
@@ -128,7 +136,11 @@ use first aid and vet/poison-control guidance for safety only.
     required String fileName,
   }) async {
     if (!isConfigured) {
-      return _offlineDiagnosis(imageBytes: imageBytes, fileName: fileName);
+      return _offlineDiagnosis(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: 'No Gemini key is configured.',
+      );
     }
 
     try {
@@ -146,8 +158,12 @@ Use confidence from 0 to 1.
       );
 
       return _decodeObject(text);
-    } on AiQuotaLimitException {
-      return _offlineDiagnosis(imageBytes: imageBytes, fileName: fileName);
+    } on AiQuotaLimitException catch (error) {
+      return _offlineDiagnosis(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: 'Gemini limit reached. ${error.message}',
+      );
     }
   }
 
@@ -282,30 +298,49 @@ Use confidence from 0 to 1.
   Future<Map<String, dynamic>> _offlineCatalogProfile({
     required Uint8List imageBytes,
     required String fileName,
+    String? fallbackReason,
   }) async {
     try {
-      return OfflinePlantCatalog.identify(
+      final profile = OfflinePlantCatalog.identify(
         imageBytes: imageBytes,
         fileName: fileName,
       );
+      return _withFallbackReason(profile, fallbackReason);
     } catch (_) {
       final taxonomyRecord = await PlantTaxonomyIndex.matchByNameSignal(
         fileName,
       );
       if (taxonomyRecord != null) {
-        return PlantTaxonomyIndex.taxonomyProfile(taxonomyRecord);
+        return _withFallbackReason(
+          PlantTaxonomyIndex.taxonomyProfile(taxonomyRecord),
+          fallbackReason,
+        );
       }
-      return _offlinePlantProfile();
+      return _offlinePlantProfile(fallbackReason: fallbackReason);
     }
   }
 
-  Map<String, dynamic> _offlinePlantProfile() {
+  Map<String, dynamic> _withFallbackReason(
+    Map<String, dynamic> profile,
+    String? fallbackReason,
+  ) {
+    final reason = fallbackReason?.trim();
+    if (reason == null || reason.isEmpty) return profile;
+    return {
+      ...profile,
+      'fallback_reason': reason,
+    };
+  }
+
+  Map<String, dynamic> _offlinePlantProfile({String? fallbackReason}) {
     return {
       'common_name': 'Unconfirmed plant',
       'scientific_name': 'Species not confirmed offline',
       'family': 'Offline estimate',
       'confidence': 0.28,
       'recognition_mode': 'offline_general',
+      if (fallbackReason?.trim().isNotEmpty == true)
+        'fallback_reason': fallbackReason!.trim(),
       'last_reference_reviewed': '2026-05-18',
       'reference_sources': [
         'ASPCA toxic and non-toxic plant database: https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants',
@@ -454,6 +489,7 @@ Use confidence from 0 to 1.
   Future<Map<String, dynamic>> _offlineDiagnosis({
     required Uint8List imageBytes,
     required String fileName,
+    String? fallbackReason,
   }) async {
     var plantName = 'your plant';
     try {
@@ -474,6 +510,8 @@ Use confidence from 0 to 1.
     return {
       'diagnosis': 'Offline health review for $plantName',
       'confidence': 0.42,
+      if (fallbackReason?.trim().isNotEmpty == true)
+        'fallback_reason': fallbackReason!.trim(),
       'severity': 'Unknown in free offline mode',
       'treatment':
           'PlantVerse Free Mode is active. For $plantName, isolate the plant, remove badly damaged leaves with clean tools, check for pests under leaves, and avoid overwatering.',
