@@ -31,6 +31,8 @@ class AiService {
   static const _definedPlantNetKey = String.fromEnvironment('PLANTNET_API_KEY');
   static const _definedPlantIdKey = String.fromEnvironment('PLANT_ID_API_KEY');
   static const _definedPerenualKey = String.fromEnvironment('PERENUAL_API_KEY');
+  static const _definedGroqKey = String.fromEnvironment('GROQ_API_KEY');
+  static const _definedGroqModel = String.fromEnvironment('GROQ_VISION_MODEL');
 
   Map<String, String> get _env => dotenv.isInitialized ? dotenv.env : const {};
   String _envValue(String key, String definedValue) {
@@ -45,6 +47,13 @@ class AiService {
       _envValue('PLANT_ID_API_KEY', _definedPlantIdKey);
   String get _perenualApiKey =>
       _envValue('PERENUAL_API_KEY', _definedPerenualKey);
+  String get _groqApiKey => _envValue('GROQ_API_KEY', _definedGroqKey);
+  String get _groqVisionModel {
+    final model = _envValue('GROQ_VISION_MODEL', _definedGroqModel);
+    return model.isNotEmpty
+        ? model
+        : 'meta-llama/llama-4-scout-17b-16e-instruct';
+  }
 
   String get _model {
     final runtimeModel = _env['GEMINI_MODEL']?.trim() ?? '';
@@ -55,7 +64,10 @@ class AiService {
 
   bool get isConfigured => _apiKey.isNotEmpty;
   bool get hasLiveProvider =>
-      isConfigured || _plantNetApiKey.isNotEmpty || _plantIdApiKey.isNotEmpty;
+      isConfigured ||
+      _groqApiKey.isNotEmpty ||
+      _plantNetApiKey.isNotEmpty ||
+      _plantIdApiKey.isNotEmpty;
 
   Future<Map<String, dynamic>> identifyPlant({
     required Uint8List imageBytes,
@@ -313,6 +325,19 @@ Use confidence from 0 to 1.
     return 'Gemini request failed with status ${response.statusCode}.';
   }
 
+  String _openAiStyleError(http.Response response, String provider) {
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final error = data['error'];
+      if (error is Map<String, dynamic> && error['message'] is String) {
+        return error['message'] as String;
+      }
+    } catch (_) {
+      // Fall back to the generic status message below.
+    }
+    return '$provider request failed with status ${response.statusCode}.';
+  }
+
   bool _isQuotaLimit(int statusCode, String message) {
     final lower = message.toLowerCase();
     return statusCode == 429 ||
@@ -328,6 +353,19 @@ Use confidence from 0 to 1.
     required String fallbackReason,
   }) async {
     final failures = <String>[];
+
+    if (_groqApiKey.isNotEmpty) {
+      try {
+        final profile = await _identifyWithGroq(
+          imageBytes: imageBytes,
+          fileName: fileName,
+          fallbackReason: fallbackReason,
+        );
+        return _withFallbackReason(profile, fallbackReason);
+      } catch (error) {
+        failures.add('Groq unavailable: $error');
+      }
+    }
 
     if (_plantNetApiKey.isNotEmpty) {
       try {
@@ -357,6 +395,92 @@ Use confidence from 0 to 1.
 
     if (failures.isEmpty) return null;
     return null;
+  }
+
+  Future<Map<String, dynamic>> _identifyWithGroq({
+    required Uint8List imageBytes,
+    required String fileName,
+    required String fallbackReason,
+  }) async {
+    final response = await http.post(
+      Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_groqApiKey',
+      },
+      body: jsonEncode({
+        'model': _groqVisionModel,
+        'messages': [
+          {
+            'role': 'user',
+            'content': [
+              {
+                'type': 'text',
+                'text': '''
+Identify the plant in this image. Return only valid JSON with:
+common_name, scientific_name, family, confidence.
+Use confidence from 0 to 1. If the image is not a plant or is unclear, set
+common_name to "Unknown" and confidence below 0.3.
+'''
+              },
+              {
+                'type': 'image_url',
+                'image_url': {
+                  'url':
+                      'data:${_mimeType(fileName)};base64,${base64Encode(imageBytes)}',
+                },
+              },
+            ],
+          }
+        ],
+        'temperature': 0,
+        'max_tokens': 500,
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = _openAiStyleError(response, 'Groq');
+      if (_isQuotaLimit(response.statusCode, message)) {
+        throw AiQuotaLimitException(message);
+      }
+      throw AiServiceException(message);
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final choices = data['choices'];
+    if (choices is! List || choices.isEmpty || choices.first is! Map) {
+      throw const AiServiceException('Groq returned no plant match.');
+    }
+    final message = (choices.first as Map)['message'];
+    final content = message is Map ? message['content'] : null;
+    if (content is! String || content.trim().isEmpty) {
+      throw const AiServiceException('Groq returned an empty answer.');
+    }
+
+    final decoded = _decodeObject(content);
+    final scientificName = _cleanText(decoded['scientific_name']);
+    final commonName =
+        _cleanText(decoded['common_name'], fallback: scientificName);
+    if (scientificName.isEmpty || commonName.toLowerCase() == 'unknown') {
+      throw const AiServiceException('Groq could not identify this plant.');
+    }
+    final confidence = decoded['confidence'] is num
+        ? (decoded['confidence'] as num).clamp(0, 1).toDouble()
+        : 0.50;
+
+    final profile = _externalIdentityProfile(
+      provider: 'Groq vision',
+      sourceUrl: 'https://console.groq.com/docs/vision',
+      commonName: commonName,
+      scientificName: scientificName,
+      family: _cleanText(
+        decoded['family'],
+        fallback: 'Plant family not listed',
+      ),
+      genus: scientificName.split(' ').first,
+      confidence: confidence,
+    );
+    return _maybeEnrichWithPerenual(profile, scientificName);
   }
 
   Future<Map<String, dynamic>> _identifyWithPlantNet({
