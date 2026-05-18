@@ -8,7 +8,11 @@ import 'core/routes/app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: '.env');
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // Free offline mode works without bundled environment keys.
+  }
 
   final supabaseUrl = dotenv.env['SUPABASE_URL']?.trim() ?? '';
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '';

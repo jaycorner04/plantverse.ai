@@ -32,14 +32,23 @@ To run the app on an emulator or connected device:
 flutter run
 ```
 
-### 4.1 Enable Live AI
-Create a free Gemini API key in Google AI Studio, then add it in `.env`:
+### 4.1 Free Mode and Optional Live AI
+
+The app works without a Gemini key. In free mode, scans and plant doctor use
+offline plant-care guidance so the APK does not stop because of API quota.
+This free mode is useful for personal care guidance, safety reminders, watering,
+light, humidity, and general plant-health steps.
+
+For exact cloud species recognition and photo-specific diagnosis, add your own
+Gemini API key in a local `.env` file:
+
 ```bash
 GEMINI_API_KEY=your_key_here
 GEMINI_MODEL=gemini-2.5-flash
 ```
 
-After changing `.env`, rebuild/restart the app. The scanner, plant doctor, and chatbot use this key for real AI responses. Without it, the app shows a setup message instead of fake answers.
+After changing `.env`, rebuild/restart the app. Do not commit `.env` or upload
+APK/web builds that contain private keys.
 
 ### 5. Building for Production
 

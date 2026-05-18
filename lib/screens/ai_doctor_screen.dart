@@ -151,7 +151,7 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
           Text(
             aiReady
                 ? 'Upload leaves, stems, soil, or roots. The AI will return symptoms, treatment, and prevention steps.'
-                : 'Add your free GEMINI_API_KEY in .env, then rebuild/restart the app to enable live diagnosis.',
+                : 'Free mode works without API limits. Upload a plant photo for offline care guidance; add your own Gemini key later only for exact cloud diagnosis.',
             style: TextStyle(
               fontSize: 17,
               height: 1.45,

@@ -99,7 +99,9 @@ use first aid and vet/poison-control guidance for safety only.
       );
 
       return _decodeObject(text);
-    } on AiQuotaLimitException {
+    } on AiServiceException {
+      return _offlinePlantProfile();
+    } catch (_) {
       return _offlinePlantProfile();
     }
   }
@@ -125,7 +127,9 @@ Use confidence from 0 to 1.
       );
 
       return _decodeObject(text);
-    } on AiQuotaLimitException {
+    } on AiServiceException {
+      return _offlineDiagnosis();
+    } catch (_) {
       return _offlineDiagnosis();
     }
   }
@@ -265,9 +269,9 @@ Use confidence from 0 to 1.
       'family': 'Offline estimate',
       'confidence': 0.48,
       'description':
-          'Gemini free quota is temporarily exhausted, so PlantVerse is showing a conservative offline plant profile. Retry later for exact species identification.',
+          'PlantVerse Free Mode is active, so this scan uses an offline care profile instead of paid cloud AI. Add your own Gemini key later only if you want exact species recognition.',
       'care_difficulty': 'Moderate until identified',
-      'native_region': 'Unknown until AI retry',
+      'native_region': 'Unknown in free offline mode',
       'toxicity_level': 'Unknown - keep away from pets and children',
       'toxicity_score': 0.45,
       'water_requirement': 'Check top soil before watering',
@@ -283,9 +287,9 @@ Use confidence from 0 to 1.
       'air_intake': 'Carbon dioxide, light energy, and water.',
       'air_release': 'Oxygen and water vapor during daylight photosynthesis.',
       'health_summary':
-          'Limit-safe offline mode is active. The photo is saved, but exact AI species analysis needs a later retry.',
+          'Free offline mode is active. The photo is saved, and PlantVerse is showing safe general plant-care intelligence without using paid cloud AI.',
       'story_markdown':
-          'Your plant is waiting in offline mode while the free Gemini quota resets. For now, treat it gently: bright indirect light, careful watering only when the top soil dries, and no pet or child access until toxicity is confirmed.',
+          'Your plant is running in Free Mode. Treat it gently: bright indirect light, careful watering only when the top soil dries, and no pet or child access until exact toxicity is confirmed.',
       'human_toxicity': {
         'level': 'Unknown',
         'severity_score': 0.45,
@@ -379,7 +383,7 @@ Use confidence from 0 to 1.
           'photosynthesis_efficiency':
               'Moderate estimate in bright indirect light.',
           'approximation_logic':
-              'Based on generic indoor plant behavior because Gemini quota was reached.'
+              'Based on generic indoor plant behavior because Free Mode avoids paid cloud AI calls.'
         },
         'co2': {
           'score': 0.54,
@@ -408,11 +412,11 @@ Use confidence from 0 to 1.
     return {
       'diagnosis': 'Limit-safe offline plant health review',
       'confidence': 0.42,
-      'severity': 'Unknown until AI retry',
+      'severity': 'Unknown in free offline mode',
       'treatment':
-          'Gemini free quota is temporarily reached. For now, isolate the plant, remove badly damaged leaves with clean tools, check for pests under leaves, and avoid overwatering.',
+          'PlantVerse Free Mode is active. For now, isolate the plant, remove badly damaged leaves with clean tools, check for pests under leaves, and avoid overwatering.',
       'recovery_time':
-          'Retry AI scan after quota resets for a better estimate.',
+          'Add your own Gemini key later if you want a photo-specific cloud AI estimate.',
       'prevention':
           'Use bright indirect light, good airflow, clean pruning tools, and water only after checking soil moisture.',
       'steps': [
@@ -420,7 +424,7 @@ Use confidence from 0 to 1.
         'Check soil moisture before watering.',
         'Inspect leaf undersides for pests or spots.',
         'Remove dead or infected leaves with clean scissors.',
-        'Retry AI diagnosis later when the free quota resets.'
+        'Use an optional Gemini key later for exact photo-specific diagnosis.'
       ],
     };
   }

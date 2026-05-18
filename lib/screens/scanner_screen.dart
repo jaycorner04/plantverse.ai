@@ -191,7 +191,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       child: Row(
                         children: [
                           Icon(
-                            aiReady ? LucideIcons.cpu : LucideIcons.keyRound,
+                            aiReady ? LucideIcons.cpu : LucideIcons.leaf,
                             color: aiReady
                                 ? AppColors.actionBlueOnDark
                                 : AppColors.warningYellow,
@@ -202,8 +202,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                             _isScanning
                                 ? 'PROCESSING'
                                 : aiReady
-                                    ? 'AI SCAN'
-                                    : 'API KEY NEEDED',
+                                    ? 'LIVE AI'
+                                    : 'FREE MODE',
                             style: const TextStyle(
                               color: AppColors.pureWhite,
                               fontWeight: FontWeight.w700,
@@ -331,7 +331,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     Text(
                       _errorMessage ??
                           _status ??
-                          'Take a clear photo of leaves, stem, and pot.',
+                          (aiReady
+                              ? 'Take a clear photo of leaves, stem, and pot.'
+                              : 'Free mode: scan works without API limits using offline plant-care intelligence.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: _errorMessage == null
