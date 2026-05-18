@@ -60,9 +60,9 @@ flutter run --dart-define=GEMINI_API_KEY=your_key
 flutter build apk --release --dart-define=GEMINI_API_KEY=your_key
 ```
 
-When a Gemini key is configured, the app tries live AI first. If quota, rate
-limit, or API failure is reached, it automatically falls back to free offline
-mode.
+When a Gemini key is configured, the app tries live AI first. It automatically
+falls back to free offline mode only when the Gemini quota/rate limit is reached.
+Other API errors are shown as errors instead of silently switching modes.
 
 For exact cloud species recognition and photo-specific diagnosis, add your own
 Gemini API key in a local `.env` file:

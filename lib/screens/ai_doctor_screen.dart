@@ -150,7 +150,7 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
           const SizedBox(height: 10),
           Text(
             aiReady
-                ? 'Upload leaves, stems, soil, or roots. Live AI runs first; if quota/API fails, free mode gives conservative care steps.'
+                ? 'Upload leaves, stems, soil, or roots. Live AI runs first; free mode starts only if the Gemini limit is reached.'
                 : 'Free mode gives conservative offline care guidance without forcing an uncertain diagnosis.',
             style: TextStyle(
               fontSize: 17,

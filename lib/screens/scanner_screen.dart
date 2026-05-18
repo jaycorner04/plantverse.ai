@@ -332,7 +332,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       _errorMessage ??
                           _status ??
                           (aiReady
-                              ? 'Live AI identifies first. If quota/API fails, PlantVerse falls back to safe free mode.'
+                              ? 'Live AI identifies first. Free mode starts only if the Gemini limit is reached.'
                               : 'Free mode gives safe care guidance and catalog matches only when reliable.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(

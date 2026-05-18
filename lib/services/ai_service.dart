@@ -118,9 +118,7 @@ use first aid and vet/poison-control guidance for safety only.
       final result = _decodeObject(text);
       result.putIfAbsent('recognition_mode', () => 'live_ai');
       return result;
-    } on AiServiceException {
-      return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
-    } catch (_) {
+    } on AiQuotaLimitException {
       return _offlineCatalogProfile(imageBytes: imageBytes, fileName: fileName);
     }
   }
@@ -148,9 +146,7 @@ Use confidence from 0 to 1.
       );
 
       return _decodeObject(text);
-    } on AiServiceException {
-      return _offlineDiagnosis(imageBytes: imageBytes, fileName: fileName);
-    } catch (_) {
+    } on AiQuotaLimitException {
       return _offlineDiagnosis(imageBytes: imageBytes, fileName: fileName);
     }
   }
@@ -316,7 +312,7 @@ Use confidence from 0 to 1.
         'NC State Extension poisonous plant resources: https://gardening.ces.ncsu.edu/gardening-plants/poisonous/',
       ],
       'description':
-          'PlantVerse Free Mode is active and no reliable local catalog match was found. This is safe general plant-care guidance, not an exact species identification. Live AI is used first whenever a Gemini key is configured; this fallback appears when no key, quota limit, or API failure is reached.',
+          'PlantVerse Free Mode is active and no reliable local catalog match was found. This is safe general plant-care guidance, not an exact species identification. Live AI is used first whenever a Gemini key is configured; this fallback appears when there is no key or when the Gemini quota/rate limit is reached.',
       'care_difficulty': 'Moderate until identified',
       'native_region': 'Unknown in free offline mode',
       'toxicity_level': 'Unknown - keep away from pets and children',
