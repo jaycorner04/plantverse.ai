@@ -60,9 +60,25 @@ flutter run --dart-define=GEMINI_API_KEY=your_key
 flutter build apk --release --dart-define=GEMINI_API_KEY=your_key
 ```
 
+You can also pass backup provider keys with `--dart-define`, for example
+`--dart-define=PLANTNET_API_KEY=your_key`.
+
 When a Gemini key is configured, the app tries live AI first. It automatically
 falls back to free offline mode only when the Gemini quota/rate limit is reached.
 Other API errors are shown as errors instead of silently switching modes.
+
+Optional backup providers can be configured with your own free/limited keys:
+
+```bash
+PLANTNET_API_KEY=your_plantnet_key
+PLANT_ID_API_KEY=your_plant_id_key
+PERENUAL_API_KEY=your_perenual_key
+```
+
+PlantVerse uses them in this order: Gemini first, then Pl@ntNet, then Plant.id.
+Perenual is used to enrich care data after a backup provider returns a plant
+name. If all configured cloud providers are unavailable or out of quota, the app
+uses the packaged offline catalog/taxonomy mode.
 
 For exact cloud species recognition and photo-specific diagnosis, add your own
 Gemini API key in a local `.env` file:

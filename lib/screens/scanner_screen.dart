@@ -138,7 +138,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final aiReady = ref.watch(aiServiceProvider).isConfigured;
+    final aiReady = ref.watch(aiServiceProvider).hasLiveProvider;
 
     return Scaffold(
       backgroundColor: AppColors.canvasDark,
@@ -332,7 +332,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       _errorMessage ??
                           _status ??
                           (aiReady
-                              ? 'Live AI identifies first. Free mode starts only if the Gemini limit is reached.'
+                              ? 'Live plant APIs identify first. Free mode starts only if cloud limits are reached or no backup key is available.'
                               : 'Free mode gives safe care guidance and catalog matches only when reliable.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(

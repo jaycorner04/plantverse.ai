@@ -88,6 +88,7 @@ class PlantDetailsScreen extends ConsumerWidget {
     if (_recognitionMode == 'offline_general') return 'General fallback';
     if (_recognitionMode == 'offline_catalog') return 'Offline catalog';
     if (_recognitionMode == 'offline_taxonomy') return '10k taxonomy';
+    if (_recognitionMode == 'external_api') return 'Backup API';
     return '${(_confidence * 100).toStringAsFixed(0)}% AI confidence';
   }
 

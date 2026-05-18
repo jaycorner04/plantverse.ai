@@ -131,7 +131,7 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
   }
 
   Widget _buildUploadView() {
-    final aiReady = ref.watch(aiServiceProvider).isConfigured;
+    final aiReady = ref.watch(aiServiceProvider).hasLiveProvider;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -150,7 +150,7 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
           const SizedBox(height: 10),
           Text(
             aiReady
-                ? 'Upload leaves, stems, soil, or roots. Live AI runs first; free mode starts only if the Gemini limit is reached.'
+                ? 'Upload leaves, stems, soil, or roots. Live AI runs first; free mode starts only if cloud limits are reached or no backup key is available.'
                 : 'Free mode gives conservative offline care guidance without forcing an uncertain diagnosis.',
             style: TextStyle(
               fontSize: 17,

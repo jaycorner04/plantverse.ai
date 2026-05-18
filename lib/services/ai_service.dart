@@ -28,13 +28,23 @@ class AiQuotaLimitException extends AiServiceException {
 class AiService {
   static const _definedApiKey = String.fromEnvironment('GEMINI_API_KEY');
   static const _definedModel = String.fromEnvironment('GEMINI_MODEL');
+  static const _definedPlantNetKey = String.fromEnvironment('PLANTNET_API_KEY');
+  static const _definedPlantIdKey = String.fromEnvironment('PLANT_ID_API_KEY');
+  static const _definedPerenualKey = String.fromEnvironment('PERENUAL_API_KEY');
 
   Map<String, String> get _env => dotenv.isInitialized ? dotenv.env : const {};
-  String get _apiKey {
-    final runtimeKey = _env['GEMINI_API_KEY']?.trim() ?? '';
-    if (runtimeKey.isNotEmpty) return runtimeKey;
-    return _definedApiKey.trim();
+  String _envValue(String key, String definedValue) {
+    final runtimeValue = _env[key]?.trim() ?? '';
+    return runtimeValue.isNotEmpty ? runtimeValue : definedValue.trim();
   }
+
+  String get _apiKey => _envValue('GEMINI_API_KEY', _definedApiKey);
+  String get _plantNetApiKey =>
+      _envValue('PLANTNET_API_KEY', _definedPlantNetKey);
+  String get _plantIdApiKey =>
+      _envValue('PLANT_ID_API_KEY', _definedPlantIdKey);
+  String get _perenualApiKey =>
+      _envValue('PERENUAL_API_KEY', _definedPerenualKey);
 
   String get _model {
     final runtimeModel = _env['GEMINI_MODEL']?.trim() ?? '';
@@ -44,12 +54,21 @@ class AiService {
   }
 
   bool get isConfigured => _apiKey.isNotEmpty;
+  bool get hasLiveProvider =>
+      isConfigured || _plantNetApiKey.isNotEmpty || _plantIdApiKey.isNotEmpty;
 
   Future<Map<String, dynamic>> identifyPlant({
     required Uint8List imageBytes,
     required String fileName,
   }) async {
     if (!isConfigured) {
+      final external = await _identifyWithExternalProviders(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: 'No Gemini key is configured.',
+      );
+      if (external != null) return external;
+
       return _offlineCatalogProfile(
         imageBytes: imageBytes,
         fileName: fileName,
@@ -123,10 +142,18 @@ use first aid and vet/poison-control guidance for safety only.
       result.putIfAbsent('recognition_mode', () => 'live_ai');
       return result;
     } on AiQuotaLimitException catch (error) {
+      final reason = 'Gemini limit reached. ${error.message}';
+      final external = await _identifyWithExternalProviders(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: reason,
+      );
+      if (external != null) return external;
+
       return _offlineCatalogProfile(
         imageBytes: imageBytes,
         fileName: fileName,
-        fallbackReason: 'Gemini limit reached. ${error.message}',
+        fallbackReason: reason,
       );
     }
   }
@@ -293,6 +320,264 @@ Use confidence from 0 to 1.
         lower.contains('quota') ||
         lower.contains('rate limit') ||
         lower.contains('too many requests');
+  }
+
+  Future<Map<String, dynamic>?> _identifyWithExternalProviders({
+    required Uint8List imageBytes,
+    required String fileName,
+    required String fallbackReason,
+  }) async {
+    final failures = <String>[];
+
+    if (_plantNetApiKey.isNotEmpty) {
+      try {
+        final profile = await _identifyWithPlantNet(
+          imageBytes: imageBytes,
+          fileName: fileName,
+          fallbackReason: fallbackReason,
+        );
+        return _withFallbackReason(profile, fallbackReason);
+      } catch (error) {
+        failures.add('Pl@ntNet unavailable: $error');
+      }
+    }
+
+    if (_plantIdApiKey.isNotEmpty) {
+      try {
+        final profile = await _identifyWithPlantId(
+          imageBytes: imageBytes,
+          fileName: fileName,
+          fallbackReason: fallbackReason,
+        );
+        return _withFallbackReason(profile, fallbackReason);
+      } catch (error) {
+        failures.add('Plant.id unavailable: $error');
+      }
+    }
+
+    if (failures.isEmpty) return null;
+    return null;
+  }
+
+  Future<Map<String, dynamic>> _identifyWithPlantNet({
+    required Uint8List imageBytes,
+    required String fileName,
+    required String fallbackReason,
+  }) async {
+    final uri = Uri.parse(
+      'https://my-api.plantnet.org/v2/identify/all',
+    ).replace(queryParameters: {
+      'api-key': _plantNetApiKey,
+      'lang': 'en',
+      'include-related-images': 'false',
+    });
+
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['organs'] = 'leaf'
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          'images',
+          imageBytes,
+          filename: fileName,
+        ),
+      );
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AiServiceException(
+        'PlantNet request failed with status ${response.statusCode}.',
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = data['results'];
+    if (results is! List || results.isEmpty || results.first is! Map) {
+      throw const AiServiceException('PlantNet returned no plant match.');
+    }
+    final top = (results.first as Map).cast<String, dynamic>();
+    final species = (top['species'] as Map?)?.cast<String, dynamic>() ?? {};
+    final scientificName = _cleanText(
+      species['scientificNameWithoutAuthor'] ?? species['scientificName'],
+    );
+    if (scientificName.isEmpty) {
+      throw const AiServiceException('PlantNet returned no scientific name.');
+    }
+    final commonNames = species['commonNames'] is List
+        ? (species['commonNames'] as List)
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : <String>[];
+    final family = _cleanText(
+      (species['family'] as Map?)?['scientificName'],
+      fallback: 'Plant family not listed',
+    );
+    final genus = _cleanText((species['genus'] as Map?)?['scientificName']);
+    final confidence = (top['score'] is num)
+        ? (top['score'] as num).clamp(0, 1).toDouble()
+        : 0.50;
+
+    final profile = _externalIdentityProfile(
+      provider: 'Pl@ntNet',
+      sourceUrl: 'https://my.plantnet.org/',
+      commonName: commonNames.isNotEmpty ? commonNames.first : scientificName,
+      scientificName: scientificName,
+      family: family,
+      genus: genus,
+      confidence: confidence,
+    );
+    return _maybeEnrichWithPerenual(profile, scientificName);
+  }
+
+  Future<Map<String, dynamic>> _identifyWithPlantId({
+    required Uint8List imageBytes,
+    required String fileName,
+    required String fallbackReason,
+  }) async {
+    final response = await http.post(
+      Uri.parse('https://api.plant.id/v3/identification'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Api-Key': _plantIdApiKey,
+      },
+      body: jsonEncode({
+        'images': [base64Encode(imageBytes)],
+        'similar_images': false,
+        'classification_level': 'species',
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AiServiceException(
+        'Plant.id request failed with status ${response.statusCode}.',
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final result = data['result'];
+    final classification = result is Map ? result['classification'] : null;
+    final suggestions =
+        classification is Map ? classification['suggestions'] : null;
+    if (suggestions is! List ||
+        suggestions.isEmpty ||
+        suggestions.first is! Map) {
+      throw const AiServiceException('Plant.id returned no plant match.');
+    }
+
+    final top = (suggestions.first as Map).cast<String, dynamic>();
+    final scientificName = _cleanText(top['name']);
+    if (scientificName.isEmpty) {
+      throw const AiServiceException('Plant.id returned no scientific name.');
+    }
+    final details = (top['details'] as Map?)?.cast<String, dynamic>() ?? {};
+    final commonNames = details['common_names'] is List
+        ? (details['common_names'] as List)
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : <String>[];
+    final taxonomy = (details['taxonomy'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final family = _cleanText(
+      taxonomy['family'],
+      fallback: 'Plant family not listed',
+    );
+    final confidence = (top['probability'] is num)
+        ? (top['probability'] as num).clamp(0, 1).toDouble()
+        : 0.50;
+
+    final profile = _externalIdentityProfile(
+      provider: 'Plant.id',
+      sourceUrl: 'https://www.kindwise.com/plant-id',
+      commonName: commonNames.isNotEmpty ? commonNames.first : scientificName,
+      scientificName: scientificName,
+      family: family,
+      genus: scientificName.split(' ').first,
+      confidence: confidence,
+    );
+    return _maybeEnrichWithPerenual(profile, scientificName);
+  }
+
+  Map<String, dynamic> _externalIdentityProfile({
+    required String provider,
+    required String sourceUrl,
+    required String commonName,
+    required String scientificName,
+    required String family,
+    required String genus,
+    required double confidence,
+  }) {
+    final profile = PlantTaxonomyIndex.taxonomyProfile({
+      'canonicalName': scientificName,
+      'scientificName': scientificName,
+      'family': family,
+      'genus': genus.isEmpty ? scientificName.split(' ').first : genus,
+      'order': 'Not listed by $provider response',
+      'commonNames': [commonName],
+      'description':
+          'Identified from the uploaded image by $provider. Care and toxicity stay conservative unless enriched by a source-backed care database.',
+      'sourceUrl': sourceUrl,
+      'gbifKey': provider,
+    });
+    return {
+      ...profile,
+      'confidence': confidence,
+      'recognition_mode': 'external_api',
+      'reference_sources': [
+        '$provider plant identification result: $sourceUrl',
+        ...((profile['reference_sources'] as List?) ?? const []),
+      ],
+    };
+  }
+
+  Future<Map<String, dynamic>> _maybeEnrichWithPerenual(
+    Map<String, dynamic> profile,
+    String scientificName,
+  ) async {
+    if (_perenualApiKey.isEmpty) return profile;
+
+    try {
+      final uri = Uri.https('www.perenual.com', '/api/v2/species-list', {
+        'key': _perenualApiKey,
+        'q': scientificName,
+      });
+      final response = await http.get(uri);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return profile;
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final items = data['data'];
+      if (items is! List || items.isEmpty || items.first is! Map) {
+        return profile;
+      }
+      final item = (items.first as Map).cast<String, dynamic>();
+      final watering = _cleanText(item['watering']);
+      final sunlight = item['sunlight'] is List
+          ? (item['sunlight'] as List).join(', ')
+          : _cleanText(item['sunlight']);
+      final cycle = _cleanText(item['cycle']);
+
+      return {
+        ...profile,
+        'reference_sources': [
+          ...((profile['reference_sources'] as List?) ?? const []),
+          'Perenual plant data: https://www.perenual.com/docs/api',
+        ],
+        if (watering.isNotEmpty) 'water_requirement': watering,
+        if (sunlight.isNotEmpty) 'sunlight_requirement': sunlight,
+        if (cycle.isNotEmpty)
+          'health_summary':
+              '${profile['health_summary']} Perenual lists the plant cycle as $cycle.',
+      };
+    } catch (_) {
+      return profile;
+    }
+  }
+
+  String _cleanText(Object? value, {String fallback = ''}) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
   }
 
   Future<Map<String, dynamic>> _offlineCatalogProfile({
