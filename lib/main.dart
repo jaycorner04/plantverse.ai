@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routes/app_router.dart';
 
@@ -12,15 +11,6 @@ void main() async {
     await dotenv.load(fileName: '.env');
   } catch (_) {
     // Free offline mode works without bundled environment keys.
-  }
-
-  final supabaseUrl = dotenv.env['SUPABASE_URL']?.trim() ?? '';
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '';
-  if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-    );
   }
 
   runApp(
