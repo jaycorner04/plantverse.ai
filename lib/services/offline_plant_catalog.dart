@@ -38,6 +38,8 @@ class OfflinePlantCatalog {
       'family': plant.family,
       'confidence': plant.confidence,
       'recognition_mode': 'offline_catalog',
+      'last_reference_reviewed': '2026-05-18',
+      'reference_sources': plant.referenceSources,
       'description':
           'Free offline catalog match from the image file signal. This profile gives species care, toxicity, and biology guidance without paid cloud AI. If the photo itself needs visual recognition, live Gemini is more accurate.',
       'care_difficulty': plant.careDifficulty,
@@ -168,6 +170,10 @@ class OfflinePlantCatalog {
       scientificName: 'Dracaena trifasciata',
       family: 'Asparagaceae',
       keywords: ['snake', 'sansevieria', 'trifasciata'],
+      referenceSources: [
+        'ASPCA Snake Plant toxicity: https://www.aspca.org/pet-care/aspca-poison-control/toxic-and-non-toxic-plants/snake-plant',
+        'NC State Extension Dracaena care/toxicity: https://plants.ces.ncsu.edu/plants/dracaena/',
+      ],
       confidence: 0.72,
       careDifficulty: 'Beginner',
       nativeRegion: 'West Africa',
@@ -238,6 +244,11 @@ class OfflinePlantCatalog {
       scientificName: 'Epipremnum aureum',
       family: 'Araceae',
       keywords: ['money', 'pothos', 'epipremnum', 'devil'],
+      referenceSources: [
+        'ASPCA Golden Pothos toxicity: https://www.aspca.org/pet-care/aspca-poison-control/toxic-and-non-toxic-plants/golden-pothos',
+        'NC State Extension Epipremnum aureum care/toxicity: https://plants.ces.ncsu.edu/plants/epipremnum-aureum/common-name/devils-vine/',
+        'IVIS poisonous plants guide for Epipremnum aureum: https://www.ivis.org/library/guide-to-poisonous-house-and-garden-plants/epipremnum-aureum-pothos',
+      ],
       confidence: 0.70,
       careDifficulty: 'Beginner',
       nativeRegion: 'Moorea and tropical Pacific regions',
@@ -309,6 +320,9 @@ class OfflinePlantCatalog {
       scientificName: 'Monstera deliciosa',
       family: 'Araceae',
       keywords: ['monstera', 'deliciosa', 'swiss'],
+      referenceSources: [
+        'ASPCA Swiss Cheese Plant toxicity: https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/swiss-cheese-plant',
+      ],
       confidence: 0.68,
       careDifficulty: 'Intermediate',
       nativeRegion: 'Tropical forests of Central America',
@@ -377,6 +391,9 @@ class OfflinePlantCatalog {
       scientificName: 'Spathiphyllum wallisii',
       family: 'Araceae',
       keywords: ['peace', 'lily', 'spathiphyllum'],
+      referenceSources: [
+        'ASPCA Peace Lily toxicity: https://www.aspca.org/pet-care/aspca-poison-control/toxic-and-non-toxic-plants/peace-lily',
+      ],
       confidence: 0.66,
       careDifficulty: 'Beginner to intermediate',
       nativeRegion: 'Tropical Americas and Southeast Asia horticultural lines',
@@ -451,6 +468,10 @@ class OfflinePlantCatalog {
         'burgundy',
         'tineke',
         'robusta'
+      ],
+      referenceSources: [
+        'NC State Extension Ficus elastica care/toxicity: https://plants.ces.ncsu.edu/plants/ficus-elastica/',
+        'Pet Poison Helpline Rubber Tree Plant toxicity: https://www.petpoisonhelpline.com/poison/rubber-tree-plant/',
       ],
       confidence: 0.82,
       careDifficulty: 'Beginner to intermediate',
@@ -541,6 +562,11 @@ class OfflinePlantCatalog {
       scientificName: 'Aloe barbadensis miller',
       family: 'Asphodelaceae',
       keywords: ['aloe', 'vera'],
+      referenceSources: [
+        'ASPCA Aloe toxicity: https://www.aspca.org/pet-care/aspca-poison-control/toxic-and-non-toxic-plants/aloe',
+        'NC State Extension Aloe vera care/toxicity: https://plants.ces.ncsu.edu/plants/aloe-vera/common-name/aloe/',
+        'NIEHS Aloe vera health background: https://www.niehs.nih.gov/health/topics/agents/aloe',
+      ],
       confidence: 0.70,
       careDifficulty: 'Beginner',
       nativeRegion: 'Arabian Peninsula and dry tropical regions',
@@ -605,6 +631,10 @@ class OfflinePlantCatalog {
       scientificName: 'Chlorophytum comosum',
       family: 'Asparagaceae',
       keywords: ['spider', 'chlorophytum'],
+      referenceSources: [
+        'ASPCA Chlorophytum pet safety: https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants/chlorophytum',
+        'Wisconsin Horticulture Spider Plant care: https://hort.extension.wisc.edu/articles/spider-plant-chlorophytum-comosum/',
+      ],
       confidence: 0.68,
       careDifficulty: 'Beginner',
       nativeRegion: 'Southern Africa',
@@ -672,6 +702,7 @@ class _OfflinePlant {
   final String scientificName;
   final String family;
   final List<String> keywords;
+  final List<String> referenceSources;
   final double confidence;
   final String careDifficulty;
   final String nativeRegion;
@@ -735,6 +766,7 @@ class _OfflinePlant {
     required this.scientificName,
     required this.family,
     required this.keywords,
+    required this.referenceSources,
     required this.confidence,
     required this.careDifficulty,
     required this.nativeRegion,

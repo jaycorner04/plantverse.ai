@@ -303,6 +303,11 @@ Use confidence from 0 to 1.
       'family': 'Offline estimate',
       'confidence': 0.28,
       'recognition_mode': 'offline_general',
+      'last_reference_reviewed': '2026-05-18',
+      'reference_sources': [
+        'ASPCA toxic and non-toxic plant database: https://www.aspca.org/pet-care/animal-poison-control/toxic-and-non-toxic-plants',
+        'NC State Extension poisonous plant resources: https://gardening.ces.ncsu.edu/gardening-plants/poisonous/',
+      ],
       'description':
           'PlantVerse Free Mode is active and no reliable local catalog match was found. This is safe general plant-care guidance, not an exact species identification. Live AI is used first whenever a Gemini key is configured; this fallback appears when no key, quota limit, or API failure is reached.',
       'care_difficulty': 'Moderate until identified',

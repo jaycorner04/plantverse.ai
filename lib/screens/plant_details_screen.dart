@@ -46,6 +46,15 @@ class PlantDetailsScreen extends ConsumerWidget {
     return text.isEmpty ? fallback : text;
   }
 
+  List<String> _stringList(String key) {
+    final value = result?[key];
+    if (value is! List) return const [];
+    return value
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
   double _score(String key, double fallback) {
     final value = result?[key];
     if (value is num) return value.clamp(0, 1).toDouble();
@@ -138,7 +147,11 @@ class PlantDetailsScreen extends ConsumerWidget {
                       _environmentalIntelligence(),
                       const SizedBox(height: 18),
                       _storyCard(),
-                      const SizedBox(height: 26),
+                      const SizedBox(height: 18),
+                      if (_stringList('reference_sources').isNotEmpty) ...[
+                        _referenceSourcesCard(),
+                        const SizedBox(height: 18),
+                      ],
                       _actions(context),
                       const SizedBox(height: 24),
                     ],
@@ -1312,6 +1325,55 @@ class PlantDetailsScreen extends ConsumerWidget {
           color: AppColors.pureWhite.withOpacity(0.76),
           letterSpacing: -0.1,
         ),
+      ),
+    );
+  }
+
+  Widget _referenceSourcesCard() {
+    final sources = _stringList('reference_sources');
+    final reviewed = _value('last_reference_reviewed', 'local database');
+    return _sectionShell(
+      icon: LucideIcons.library,
+      title: 'Reference sources',
+      subtitle: 'Offline facts packaged from source-backed plant references.',
+      accent: AppColors.actionBlueOnDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Reviewed: $reviewed',
+            style: TextStyle(
+              color: AppColors.pureWhite.withOpacity(0.72),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...sources.map(
+            (source) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    LucideIcons.link,
+                    size: 15,
+                    color: AppColors.actionBlueOnDark.withOpacity(0.92),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      source,
+                      style: TextStyle(
+                        color: AppColors.pureWhite.withOpacity(0.70),
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
