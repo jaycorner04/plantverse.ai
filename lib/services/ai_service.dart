@@ -37,6 +37,16 @@ class AiService {
       String.fromEnvironment('OPENROUTER_API_KEY');
   static const _definedBackendBaseUrl =
       String.fromEnvironment('BACKEND_BASE_URL');
+  static const _knownVisualConfusionGuidance = '''
+
+Known visual confusion rule:
+If the image shows an upright pine-like succulent with narrow pointed green
+leaves arranged around branching woody or succulent stems, consider Crassula
+tetragona, also called Miniature Pine Tree, Pine Tree Crassula, or pine
+succulent. Do not label it as Coral Beads or Nertera granadensis unless the
+image clearly shows a low creeping mat with many round orange-red bead-like
+berries. Coral Beads is not a pine-like succulent.
+''';
 
   Map<String, String> get _env => dotenv.isInitialized ? dotenv.env : const {};
   String _envValue(String key, String definedValue) {
@@ -188,6 +198,7 @@ All estimates must be scientifically styled, realistic, and human readable.
 When exact values are unavailable, provide estimated ranges and explain the
 approximation logic. Do not diagnose serious human or animal medical issues;
 use first aid and vet/poison-control guidance for safety only.
+$_knownVisualConfusionGuidance
 ''',
         imageBytes: imageBytes,
         fileName: fileName,
@@ -602,6 +613,7 @@ biology: {photosynthesis_type, transpiration_details, root_oxygen_exchange,
 growth_respiration_details}.
 
 If the image is not a plant, set common_name to Unknown and explain in description.
+$_knownVisualConfusionGuidance
 Return only raw JSON. No markdown. No code blocks.
 '''
               },
@@ -686,6 +698,7 @@ temperature_range, humidity_level, humidity_score, photosynthesis_score,
 oxygen_output, air_intake, air_release, health_summary, story_markdown,
 human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
 environmental_intelligence.
+$_knownVisualConfusionGuidance
 Return only raw JSON. No markdown. No code blocks.
 '''
               },

@@ -53,6 +53,14 @@ carbon_capture_efficiency, indoor_air_improvement},
 biology: {photosynthesis_type, transpiration_details, root_oxygen_exchange,
 growth_respiration_details}.
 
+Known visual confusion rule:
+If the image shows an upright pine-like succulent with narrow pointed green
+leaves arranged around branching woody or succulent stems, consider Crassula
+tetragona, also called Miniature Pine Tree, Pine Tree Crassula, or pine
+succulent. Do not label it as Coral Beads or Nertera granadensis unless the
+image clearly shows a low creeping mat with many round orange-red bead-like
+berries. Coral Beads is not a pine-like succulent.
+
 If the image is not a plant, set common_name to Unknown and explain in description.
 Return only raw JSON. No markdown. No code blocks.`;
 

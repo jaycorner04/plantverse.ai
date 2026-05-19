@@ -627,6 +627,118 @@ class OfflinePlantCatalog {
       rootOxygen: 'Roots require very fast drainage and air.',
     ),
     const _OfflinePlant(
+      commonName: 'Miniature Pine Tree / Pine Succulent',
+      scientificName: 'Crassula tetragona',
+      family: 'Crassulaceae',
+      keywords: [
+        'crassula tetragona',
+        'crassula-tetragona',
+        'crassula_tetragona',
+        'tetragona',
+        'miniature pine',
+        'miniature-pine',
+        'miniature_pine',
+        'mini pine',
+        'mini-pine',
+        'mini_pine',
+        'pine succulent',
+        'pine-succulent',
+        'pine_succulent',
+        'pine tree crassula',
+        'pine-tree-crassula',
+        'pine_tree_crassula',
+        'bonsai pine',
+      ],
+      referenceSources: [
+        'Kew Plants of the World Online Crassula tetragona taxonomy: https://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:273543-1/general-information',
+        'Gardenia Crassula tetragona care profile: https://www.gardenia.net/plant/crassula-tetragona-miniature-pine-tree-grow-care-guide',
+        'ASPCA Jade Plant/Crassula pet toxicity caution: https://www.aspca.org/pet-care/aspca-poison-control/toxic-and-non-toxic-plants/jade-plant',
+      ],
+      confidence: 0.76,
+      careDifficulty: 'Beginner to moderate',
+      nativeRegion: 'Cape Province, South Africa',
+      humanLevel: 'Low toxicity, not edible',
+      toxicityScore: 0.32,
+      touchEffects:
+          'Usually safe to handle; dry or broken stems may irritate sensitive skin.',
+      ingestionEffects:
+          'Not a food plant. Eating leaves may cause mild mouth or stomach irritation.',
+      skinIrritation:
+          'Skin irritation is uncommon, but wash hands after pruning sap or broken stems.',
+      childWarning:
+          'Keep out of reach of children who may chew succulent leaves.',
+      catSeverity: 'Caution',
+      dogSeverity: 'Caution',
+      birdSeverity: 'Unknown',
+      petSymptoms:
+          'Possible vomiting, drooling, poor appetite, lethargy, or digestive upset if chewed.',
+      birdSymptoms:
+          'Avoid chewing exposure; reliable bird-specific safety data is limited.',
+      petEmergency: 'Call a vet if eaten',
+      birdEmergency: 'Avoid exposure',
+      compoundSummary:
+          'Specific Crassula tetragona toxic compounds are not well established in common references; treat ingestion cautiously because some Crassula relatives are toxic to pets.',
+      harmfulCompounds: 'Unknown Crassula irritants in related species',
+      alkaloids: 'Not commonly reported',
+      oxalates: 'Not the main concern',
+      latex: 'No significant latex commonly reported',
+      sapChemicals: 'Watery succulent sap; exact irritants not established',
+      waterFrequency:
+          'Water every 14-21 days in bright warm conditions, only after the mix dries fully.',
+      waterAmount:
+          'Soak the root ball lightly to evenly moisten the soil, then drain completely.',
+      overwateringRisk:
+          'Very high; wet soil can cause yellowing, stem collapse, and root rot.',
+      underwateringSymptoms:
+          'Wrinkled narrow leaves, dry tips, leaf drop, and stalled growth.',
+      soilPreference:
+          'Fast-draining cactus or succulent mix with extra pumice, perlite, or coarse sand.',
+      waterScore: 0.24,
+      lightPreference:
+          'Bright light with several hours of gentle sun; acclimate slowly to stronger sun.',
+      sunlightScore: 0.76,
+      directTolerance:
+          'Handles morning or late-day direct sun; protect from sudden harsh afternoon sun indoors.',
+      indoorCompatibility:
+          'Good on a very bright windowsill or under a grow light.',
+      outdoorCompatibility:
+          'Good outdoors in warm, dry, frost-free conditions or protected containers.',
+      bestWindow: 'East, south, or west window with gradual sun acclimation.',
+      heatTolerance:
+          'Good heat tolerance when roots are dry and airflow is decent.',
+      humidity: '30-50% humidity is ideal.',
+      humidityScore: 0.22,
+      dryClimateTolerance:
+          'Excellent dry-climate tolerance because the leaves store water.',
+      misting: 'Do not mist; keep foliage dry and rely on soil watering.',
+      acCompatibility:
+          'Tolerates average AC rooms if kept bright and away from cold drafts.',
+      temperatureRange: '18-29 C',
+      temperatureScore: 0.72,
+      minimumTemperature: 'Keep above 7-10 C; protect from frost.',
+      maximumTemperature: 'Avoid sustained indoor heat above 35 C.',
+      winterSurvival:
+          'Not frost-safe in pots; keep drier and warmer during winter dormancy.',
+      photosynthesisScore: 0.64,
+      oxygenEstimate:
+          'roughly 2-6 mL oxygen/hour for a small bright-window specimen',
+      airPurificationScore: 0.42,
+      indoorAirContribution:
+          'Small gas-exchange contribution; useful as living greenery, not a replacement for ventilation.',
+      nasaRelevance:
+          'Not a classic NASA clean-air study plant; environmental estimates are based on succulent leaf area and light.',
+      photosynthesisEfficiency:
+          'Water-efficient CAM-style succulent metabolism with modest total leaf area.',
+      co2Score: 0.48,
+      co2Estimate: 'small CO2 uptake, strongest during active bright growth',
+      carbonEfficiency: 'Low to modest indoors, but very water efficient',
+      photosynthesisType: 'CAM-style succulent photosynthesis',
+      transpiration:
+          'Low transpiration; narrow water-storing leaves limit moisture loss.',
+      rootOxygen:
+          'Roots need oxygen-rich gritty soil; saturated mixes suffocate roots quickly.',
+    ),
+    const _OfflinePlant(
       commonName: 'Spider Plant',
       scientificName: 'Chlorophytum comosum',
       family: 'Asparagaceae',
