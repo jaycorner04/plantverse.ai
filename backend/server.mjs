@@ -10,6 +10,7 @@ loadEnv(path.join(__dirname, '..', '.env'));
 const env = process.env;
 const port = Number.parseInt(env.PORT || '8787', 10);
 const maxBodyBytes = Number.parseInt(env.MAX_BODY_BYTES || '12000000', 10);
+const publicDir = path.join(__dirname, 'public');
 
 const plantProfilePrompt = `Identify the plant in this image. Return only valid JSON with:
 common_name, scientific_name, family, confidence, description, care_difficulty,
@@ -84,7 +85,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
-    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/api/health')) {
+    if (req.method === 'GET' && url.pathname === '/api/health') {
       sendJson(res, 200, {
         ok: true,
         service: 'PlantVerse AI backend',
@@ -98,6 +99,10 @@ const server = http.createServer(async (req, res) => {
         },
       });
       return;
+    }
+
+    if ((req.method === 'GET' || req.method === 'HEAD') && !url.pathname.startsWith('/api/')) {
+      if (await serveStatic(req, res, url.pathname)) return;
     }
 
     if (req.method === 'POST' && url.pathname === '/api/identify-plant') {
@@ -713,6 +718,83 @@ function applyCors(req, res) {
 function sendJson(res, status, data) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+async function serveStatic(req, res, requestPath) {
+  const indexPath = path.join(publicDir, 'index.html');
+  if (!fs.existsSync(indexPath)) return false;
+
+  const decodedPath = decodeURIComponent(requestPath);
+  const normalizedPath = path
+    .normalize(decodedPath)
+    .replace(/^(\.\.[/\\])+/, '')
+    .replace(/^[/\\]+/, '');
+  let filePath = path.join(publicDir, normalizedPath);
+
+  if (!filePath.startsWith(publicDir)) {
+    sendJson(res, 403, { error: { message: 'Forbidden.' } });
+    return true;
+  }
+
+  try {
+    const stat = fs.existsSync(filePath) ? fs.statSync(filePath) : null;
+    if (!stat || stat.isDirectory()) {
+      filePath = indexPath;
+    }
+    await sendFile(req, res, filePath);
+    return true;
+  } catch {
+    await sendFile(req, res, indexPath);
+    return true;
+  }
+}
+
+function sendFile(req, res, filePath) {
+  return new Promise((resolve, reject) => {
+    const headers = {
+      'Content-Type': contentType(filePath),
+      'Cache-Control': filePath.endsWith('index.html')
+        ? 'no-cache'
+        : 'public, max-age=31536000, immutable',
+    };
+    res.writeHead(200, headers);
+    if (req.method === 'HEAD') {
+      res.end();
+      resolve();
+      return;
+    }
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', reject);
+    stream.on('end', resolve);
+    stream.pipe(res);
+  });
+}
+
+function contentType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  switch (ext) {
+    case '.html':
+      return 'text/html; charset=utf-8';
+    case '.js':
+      return 'application/javascript; charset=utf-8';
+    case '.css':
+      return 'text/css; charset=utf-8';
+    case '.json':
+      return 'application/json; charset=utf-8';
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.svg':
+      return 'image/svg+xml';
+    case '.wasm':
+      return 'application/wasm';
+    case '.ico':
+      return 'image/x-icon';
+    default:
+      return 'application/octet-stream';
+  }
 }
 
 function readJson(req) {
