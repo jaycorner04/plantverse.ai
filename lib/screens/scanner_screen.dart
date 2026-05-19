@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -28,6 +28,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   Uint8List? _selectedBytes;
   String? _status;
   String? _errorMessage;
+  Timer? _scanStatusTimer;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   @override
   void dispose() {
+    _scanStatusTimer?.cancel();
     _scanAnimationController.dispose();
     super.dispose();
   }
@@ -94,10 +96,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     setState(() {
       _selectedBytes = bytes;
       _isScanning = true;
-      _status = 'Identifying flora...';
+      _status = ref.read(aiServiceProvider).usesBackend
+          ? 'Waking PlantVerse cloud...'
+          : 'Identifying flora...';
       _errorMessage = null;
     });
     _scanAnimationController.repeat(reverse: true);
+    _startScanStatusCycle();
 
     try {
       final result = await ref.read(aiServiceProvider).identifyPlant(
@@ -118,12 +123,40 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       });
     } finally {
       if (mounted) {
+        _scanStatusTimer?.cancel();
         _scanAnimationController.stop();
         setState(() {
           _isScanning = false;
         });
       }
     }
+  }
+
+  void _startScanStatusCycle() {
+    final messages = ref.read(aiServiceProvider).usesBackend
+        ? const [
+            'Uploading compressed plant image...',
+            'Asking PlantVerse AI vision...',
+            'Checking backup plant providers...',
+            'Building care, toxicity, and environment profile...',
+            'Still working. Free cloud servers can take about a minute after sleeping...',
+          ]
+        : const [
+            'Checking local plant catalog...',
+            'Building safe offline care guidance...',
+          ];
+    var index = 0;
+    _scanStatusTimer?.cancel();
+    _scanStatusTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
+      if (!mounted || !_isScanning) {
+        timer.cancel();
+        return;
+      }
+      final safeIndex = index < messages.length ? index : messages.length - 1;
+      final next = messages[safeIndex];
+      setState(() => _status = next);
+      if (index < messages.length - 1) index += 1;
+    });
   }
 
   void _showPickerError(String message) {
@@ -332,7 +365,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       _errorMessage ??
                           _status ??
                           (aiReady
-                              ? 'Live plant APIs identify first. Free mode starts only if cloud limits are reached or no backup key is available.'
+                              ? 'Online scan uses PlantVerse cloud first. First scan may take longer if the free server is waking.'
                               : 'Free mode gives safe care guidance and catalog matches only when reliable.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(

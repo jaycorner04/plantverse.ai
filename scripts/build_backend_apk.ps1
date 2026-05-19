@@ -2,9 +2,9 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$BackendBaseUrl,
 
-  [string]$AppVersionName = '1.0.1',
+  [string]$AppVersionName = '1.0.2',
 
-  [int]$AppVersionCode = 2
+  [int]$AppVersionCode = 3
 )
 
 Set-StrictMode -Version Latest

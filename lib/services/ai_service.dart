@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -83,6 +84,7 @@ berries. Coral Beads is not a pine-like succulent.
   }
 
   bool get isConfigured => _apiKey.isNotEmpty;
+  bool get usesBackend => _backendBaseUrl.isNotEmpty;
   bool get hasLiveProvider =>
       _backendBaseUrl.isNotEmpty ||
       isConfigured ||
@@ -90,6 +92,17 @@ berries. Coral Beads is not a pine-like succulent.
       _openRouterApiKey.isNotEmpty ||
       _plantNetApiKey.isNotEmpty ||
       _plantIdApiKey.isNotEmpty;
+
+  Future<void> warmBackend() async {
+    if (_backendBaseUrl.isEmpty) return;
+    try {
+      await http.get(_backendUri('/api/health')).timeout(
+            const Duration(seconds: 12),
+          );
+    } catch (_) {
+      // Warm-up is best effort; scanning can still try the backend later.
+    }
+  }
 
   Future<Map<String, dynamic>> identifyPlant({
     required Uint8List imageBytes,
@@ -299,11 +312,24 @@ Use confidence from 0 to 1.
     String path,
     Map<String, dynamic> body,
   ) async {
-    final response = await http.post(
-      _backendUri(path),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
-    );
+    late final http.Response response;
+    try {
+      response = await http
+          .post(
+            _backendUri(path),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 95));
+    } on TimeoutException {
+      throw const AiServiceException(
+        'PlantVerse cloud is taking too long. Free cloud servers can wake slowly; try again in a moment.',
+      );
+    } catch (error) {
+      throw AiServiceException(
+        'PlantVerse cloud connection failed. Check internet and try again. $error',
+      );
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = _backendError(response);

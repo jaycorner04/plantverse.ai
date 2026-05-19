@@ -735,8 +735,8 @@ function sendJson(res, status, data) {
 
 function appVersionPayload(req) {
   const baseUrl = publicBaseUrl(req);
-  const latestVersionCode = Number.parseInt(env.APP_VERSION_CODE || '2', 10);
-  const latestVersionName = cleanText(env.APP_VERSION_NAME) || '1.0.1';
+  const latestVersionCode = Number.parseInt(env.APP_VERSION_CODE || '3', 10);
+  const latestVersionName = cleanText(env.APP_VERSION_NAME) || '1.0.2';
   const apkUrl =
     cleanText(env.APK_URL) ||
     `${baseUrl}/downloads/PlantVerse-AI-release.apk`;
@@ -755,8 +755,9 @@ function appVersionPayload(req) {
     force_update: env.FORCE_APP_UPDATE === 'true',
     release_notes: [
       'Improved pine succulent identification.',
+      'Warms PlantVerse cloud on app launch to reduce first-scan lag.',
+      'Shows scan progress while cloud AI is working.',
       'Added Miniature Pine Tree / Crassula tetragona offline profile.',
-      'Keeps cloud-backed plant intelligence connected to the public backend.',
     ],
   };
 }

@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/routes/app_router.dart';
+import '../services/ai_service.dart';
 import '../services/app_update_service.dart';
 
 class AppUpdateGate extends ConsumerStatefulWidget {
@@ -24,7 +25,10 @@ class _AppUpdateGateState extends ConsumerState<AppUpdateGate> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForUpdate());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(aiServiceProvider).warmBackend();
+      _checkForUpdate();
+    });
   }
 
   Future<void> _checkForUpdate() async {
