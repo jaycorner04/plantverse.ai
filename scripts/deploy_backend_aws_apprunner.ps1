@@ -88,16 +88,20 @@ docker push $imageUri
 
 $roleName = 'PlantVerseAppRunnerEcrAccessRole'
 $trustPolicyPath = Join-Path $env:TEMP 'plantverse-apprunner-trust-policy.json'
-@{
-  Version = '2012-10-17'
-  Statement = @(
-    @{
-      Effect = 'Allow'
-      Principal = @{ Service = 'build.apprunner.amazonaws.com' }
-      Action = 'sts:AssumeRole'
+@'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "build.apprunner.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
     }
-  )
-} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $trustPolicyPath -Encoding UTF8
+  ]
+}
+'@ | Set-Content -LiteralPath $trustPolicyPath -Encoding ascii
 
 Write-Host "Ensuring App Runner ECR access role..."
 try {

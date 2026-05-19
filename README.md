@@ -83,6 +83,8 @@ unavailable, it falls back to the packaged offline catalog instead of exposing
 provider keys.
 
 For AWS public deployment, use the App Runner guide in `AWS_DEPLOYMENT.md`.
+If AWS account activation blocks App Runner, use the free Render path in
+`RENDER_DEPLOYMENT.md`.
 
 When a Gemini key is configured, the app tries live AI first. It automatically
 falls back to free offline mode only when the Gemini quota/rate limit is reached.
