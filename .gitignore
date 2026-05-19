@@ -40,6 +40,8 @@ migrate_working_dir/
 /flutter/
 *.zip
 /mobile-apk/
+/backend/.env
+/backend/node_modules/
 tmp*.log
 *_stdout.log
 *_stderr.log

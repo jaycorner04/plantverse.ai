@@ -35,6 +35,8 @@ class AiService {
   static const _definedGroqModel = String.fromEnvironment('GROQ_VISION_MODEL');
   static const _definedOpenRouterKey =
       String.fromEnvironment('OPENROUTER_API_KEY');
+  static const _definedBackendBaseUrl =
+      String.fromEnvironment('BACKEND_BASE_URL');
 
   Map<String, String> get _env => dotenv.isInitialized ? dotenv.env : const {};
   String _envValue(String key, String definedValue) {
@@ -52,6 +54,10 @@ class AiService {
   String get _groqApiKey => _envValue('GROQ_API_KEY', _definedGroqKey);
   String get _openRouterApiKey =>
       _envValue('OPENROUTER_API_KEY', _definedOpenRouterKey);
+  String get _backendBaseUrl => _envValue(
+        'BACKEND_BASE_URL',
+        _definedBackendBaseUrl,
+      ).replaceAll(RegExp(r'/+$'), '');
   String get _groqVisionModel {
     final model = _envValue('GROQ_VISION_MODEL', _definedGroqModel);
     return model.isNotEmpty
@@ -68,6 +74,7 @@ class AiService {
 
   bool get isConfigured => _apiKey.isNotEmpty;
   bool get hasLiveProvider =>
+      _backendBaseUrl.isNotEmpty ||
       isConfigured ||
       _groqApiKey.isNotEmpty ||
       _openRouterApiKey.isNotEmpty ||
@@ -78,6 +85,21 @@ class AiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
+    if (_backendBaseUrl.isNotEmpty) {
+      try {
+        return await _identifyPlantWithBackend(
+          imageBytes: imageBytes,
+          fileName: fileName,
+        );
+      } on AiServiceException catch (error) {
+        return _offlineCatalogProfile(
+          imageBytes: imageBytes,
+          fileName: fileName,
+          fallbackReason: 'PlantVerse backend unavailable. ${error.message}',
+        );
+      }
+    }
+
     if (_apiKey.isEmpty &&
         (_groqApiKey.isNotEmpty || _openRouterApiKey.isNotEmpty)) {
       final external = await _identifyWithExternalProviders(
@@ -195,6 +217,21 @@ use first aid and vet/poison-control guidance for safety only.
     required Uint8List imageBytes,
     required String fileName,
   }) async {
+    if (_backendBaseUrl.isNotEmpty) {
+      try {
+        return await _diagnoseDiseaseWithBackend(
+          imageBytes: imageBytes,
+          fileName: fileName,
+        );
+      } on AiServiceException catch (error) {
+        return _offlineDiagnosis(
+          imageBytes: imageBytes,
+          fileName: fileName,
+          fallbackReason: 'PlantVerse backend unavailable. ${error.message}',
+        );
+      }
+    }
+
     if (!isConfigured) {
       return _offlineDiagnosis(
         imageBytes: imageBytes,
@@ -225,6 +262,73 @@ Use confidence from 0 to 1.
         fallbackReason: 'Gemini limit reached. ${error.message}',
       );
     }
+  }
+
+  Future<Map<String, dynamic>> _identifyPlantWithBackend({
+    required Uint8List imageBytes,
+    required String fileName,
+  }) {
+    return _postBackendMap('/api/identify-plant', {
+      'fileName': fileName,
+      'imageBase64': base64Encode(imageBytes),
+    });
+  }
+
+  Future<Map<String, dynamic>> _diagnoseDiseaseWithBackend({
+    required Uint8List imageBytes,
+    required String fileName,
+  }) {
+    return _postBackendMap('/api/diagnose-disease', {
+      'fileName': fileName,
+      'imageBase64': base64Encode(imageBytes),
+    });
+  }
+
+  Future<Map<String, dynamic>> _postBackendMap(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await http.post(
+      _backendUri(path),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = _backendError(response);
+      if (_isQuotaLimit(response.statusCode, message)) {
+        throw AiQuotaLimitException(message);
+      }
+      throw AiServiceException(message);
+    }
+
+    final data = jsonDecode(response.body);
+    if (data is! Map) {
+      throw const AiServiceException(
+          'PlantVerse backend returned invalid JSON.');
+    }
+    return data.cast<String, dynamic>();
+  }
+
+  Uri _backendUri(String path) {
+    final base = Uri.parse('$_backendBaseUrl/');
+    return base.resolve(path.startsWith('/') ? path.substring(1) : path);
+  }
+
+  String _backendError(http.Response response) {
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final error = data['error'];
+      if (error is Map<String, dynamic> && error['message'] is String) {
+        return error['message'] as String;
+      }
+      if (data['message'] is String) {
+        return data['message'] as String;
+      }
+    } catch (_) {
+      // Fall back to the generic status message below.
+    }
+    return 'PlantVerse backend request failed with status ${response.statusCode}.';
   }
 
   Future<String> _generate({

@@ -63,6 +63,25 @@ flutter build apk --release --dart-define=GEMINI_API_KEY=your_key
 You can also pass backup provider keys with `--dart-define`, for example
 `--dart-define=PLANTNET_API_KEY=your_key`.
 
+For APKs shared with friends, use the backend proxy instead of compiling API
+keys into the APK. Put all provider keys on the server, then build the app with
+only the backend URL:
+
+```bash
+cd backend
+npm start
+
+flutter build apk --release --dart-define=BACKEND_BASE_URL=https://your-backend-url
+```
+
+Local backend development runs on `http://127.0.0.1:8787` for web testing. For
+testing on a physical Android phone on the same Wi-Fi, build with your computer
+LAN address, for example `http://192.168.1.4:8787`. Friends outside your Wi-Fi
+need a public hosted HTTPS backend URL from a service such as Render, Railway,
+Fly.io, or a VPS. The Flutter app calls `BACKEND_BASE_URL` first; if it is
+unavailable, it falls back to the packaged offline catalog instead of exposing
+provider keys.
+
 When a Gemini key is configured, the app tries live AI first. It automatically
 falls back to free offline mode only when the Gemini quota/rate limit is reached.
 Other API errors are shown as errors instead of silently switching modes.
