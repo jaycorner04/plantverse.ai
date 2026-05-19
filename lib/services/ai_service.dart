@@ -73,6 +73,16 @@ class AiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
+    if (_apiKey.isEmpty && _groqApiKey.isNotEmpty) {
+      final result = await _identifyWithGroq(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: '',
+      );
+      result['recognition_mode'] = 'groq_vision';
+      return result;
+    }
+
     if (!isConfigured) {
       final external = await _identifyWithExternalProviders(
         imageBytes: imageBytes,
@@ -423,9 +433,48 @@ Use confidence from 0 to 1.
                 'type': 'text',
                 'text': '''
 Identify the plant in this image. Return only valid JSON with:
-common_name, scientific_name, family, confidence.
-Use confidence from 0 to 1. If the image is not a plant or is unclear, set
-common_name to "Unknown" and confidence below 0.3.
+common_name, scientific_name, family, confidence, description, care_difficulty,
+native_region, toxicity_level, toxicity_score, water_requirement, water_score,
+sunlight_requirement, sunlight_score, temperature_range, humidity_level,
+humidity_score, photosynthesis_score, oxygen_output, air_intake, air_release,
+health_summary, story_markdown,
+human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
+environmental_intelligence.
+
+Use confidence, toxicity_score, water_score, sunlight_score, humidity_score,
+and photosynthesis_score from 0 to 1.
+
+human_toxicity must be an object with:
+level, severity_score, touch_effects, ingestion_effects, skin_irritation,
+child_warning, first_aid.
+
+pet_toxicity must be an object with cats, dogs, and birds. Each must include:
+severity, symptoms, emergency_level.
+
+toxic_compounds must be an object with:
+summary, harmful_compounds, alkaloids, oxalates, latex, sap_chemicals.
+
+care_intelligence must be an object with:
+water: {score, ideal_frequency, amount_estimation, overwatering_risk,
+underwatering_symptoms, seasonal_changes, soil_moisture_preference},
+sunlight: {score, direct_tolerance, indirect_preference, indoor_compatibility,
+outdoor_compatibility, best_window_direction, heat_tolerance},
+humidity: {score, ideal_humidity, dry_climate_tolerance,
+misting_recommendations, ac_room_compatibility},
+temperature: {score, minimum_temperature, maximum_temperature,
+best_growth_temperature, winter_survival}.
+
+environmental_intelligence must be an object with:
+oxygen: {score, estimated_daily_release, day_vs_night, air_purification_score,
+indoor_contribution, nasa_clean_air_relevance, photosynthesis_efficiency,
+approximation_logic},
+co2: {score, estimated_daily_absorption, photosynthesis_cycle,
+carbon_capture_efficiency, indoor_air_improvement},
+biology: {photosynthesis_type, transpiration_details, root_oxygen_exchange,
+growth_respiration_details}.
+
+If the image is not a plant, set common_name to Unknown and explain in description.
+Return only raw JSON. No markdown. No code blocks.
 '''
               },
               {
@@ -439,7 +488,7 @@ common_name to "Unknown" and confidence below 0.3.
           }
         ],
         'temperature': 0,
-        'max_tokens': 500,
+        'max_tokens': 4000,
       }),
     );
 
@@ -462,30 +511,14 @@ common_name to "Unknown" and confidence below 0.3.
       throw const AiServiceException('Groq returned an empty answer.');
     }
 
-    final decoded = _decodeObject(content);
-    final scientificName = _cleanText(decoded['scientific_name']);
-    final commonName =
-        _cleanText(decoded['common_name'], fallback: scientificName);
-    if (scientificName.isEmpty || commonName.toLowerCase() == 'unknown') {
-      throw const AiServiceException('Groq could not identify this plant.');
+    final result = _decodeObject(content);
+    final scientificName = _cleanText(result['scientific_name']);
+    if (scientificName.isEmpty) {
+      result['common_name'] = 'Unknown plant';
     }
-    final confidence = decoded['confidence'] is num
-        ? (decoded['confidence'] as num).clamp(0, 1).toDouble()
-        : 0.50;
-
-    final profile = _externalIdentityProfile(
-      provider: 'Groq vision',
-      sourceUrl: 'https://console.groq.com/docs/vision',
-      commonName: commonName,
-      scientificName: scientificName,
-      family: _cleanText(
-        decoded['family'],
-        fallback: 'Plant family not listed',
-      ),
-      genus: scientificName.split(' ').first,
-      confidence: confidence,
-    );
-    return _maybeEnrichWithPerenual(profile, scientificName);
+    result['recognition_mode'] = 'groq_vision';
+    result['reference_sources'] = ['Groq vision AI: https://console.groq.com'];
+    return result;
   }
 
   Future<Map<String, dynamic>> _identifyWithPlantNet({
