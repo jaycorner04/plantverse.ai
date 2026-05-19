@@ -82,6 +82,8 @@ Fly.io, or a VPS. The Flutter app calls `BACKEND_BASE_URL` first; if it is
 unavailable, it falls back to the packaged offline catalog instead of exposing
 provider keys.
 
+For AWS public deployment, use the App Runner guide in `AWS_DEPLOYMENT.md`.
+
 When a Gemini key is configured, the app tries live AI first. It automatically
 falls back to free offline mode only when the Gemini quota/rate limit is reached.
 Other API errors are shown as errors instead of silently switching modes.
