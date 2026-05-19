@@ -803,9 +803,7 @@ function sendFile(req, res, filePath) {
   return new Promise((resolve, reject) => {
     const headers = {
       'Content-Type': contentType(filePath),
-      'Cache-Control': filePath.endsWith('index.html')
-        ? 'no-cache'
-        : 'public, max-age=31536000, immutable',
+      'Cache-Control': cacheControl(filePath),
     };
     res.writeHead(200, headers);
     if (req.method === 'HEAD') {
@@ -818,6 +816,21 @@ function sendFile(req, res, filePath) {
     stream.on('end', resolve);
     stream.pipe(res);
   });
+}
+
+function cacheControl(filePath) {
+  const name = path.basename(filePath);
+  if (
+    name === 'index.html' ||
+    name === 'main.dart.js' ||
+    name === 'flutter.js' ||
+    name === 'flutter_service_worker.js' ||
+    name === 'version.json' ||
+    name === '.last_build_id'
+  ) {
+    return 'no-cache';
+  }
+  return 'public, max-age=31536000, immutable';
 }
 
 function contentType(filePath) {
