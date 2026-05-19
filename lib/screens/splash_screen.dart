@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -25,29 +26,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _recoverOrContinue() async {
-    final picker = ImagePicker();
-    try {
-      final response = await picker.retrieveLostData();
-      final image = response.file ??
-          (response.files?.isNotEmpty == true ? response.files!.first : null);
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final picker = ImagePicker();
+      try {
+        final response = await picker.retrieveLostData();
+        final image = response.file ??
+            (response.files?.isNotEmpty == true ? response.files!.first : null);
 
-      if (image != null) {
-        setState(() => _status = 'Restoring your scan...');
-        final bytes = await image.readAsBytes();
-        final result = await ref.read(aiServiceProvider).identifyPlant(
-              imageBytes: bytes,
-              fileName: image.name,
-            );
-        if (!mounted) return;
-        ref.read(scanResultProvider.notifier).state = ScanResult(
-          result: result,
-          imageBytes: bytes,
-        );
-        context.go('/plant_details');
-        return;
+        if (image != null) {
+          setState(() => _status = 'Restoring your scan...');
+          final bytes = await image.readAsBytes();
+          final result = await ref.read(aiServiceProvider).identifyPlant(
+                imageBytes: bytes,
+                fileName: image.name,
+              );
+          if (!mounted) return;
+          ref.read(scanResultProvider.notifier).state = ScanResult(
+            result: result,
+            imageBytes: bytes,
+          );
+          context.go('/plant_details');
+          return;
+        }
+      } catch (_) {
+        // Continue to home if there is no recoverable camera result.
       }
-    } catch (_) {
-      // Continue to home if there is no recoverable camera result.
     }
 
     await Future.delayed(const Duration(milliseconds: 1200));

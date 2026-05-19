@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   }
 
   Future<void> _recoverLostImage() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+
     try {
       final response = await _imagePicker.retrieveLostData();
       if (!mounted || response.isEmpty) return;
