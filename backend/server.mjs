@@ -109,6 +109,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/app-version') {
+      sendJson(res, 200, appVersionPayload(req));
+      return;
+    }
+
     if ((req.method === 'GET' || req.method === 'HEAD') && !url.pathname.startsWith('/api/')) {
       if (await serveStatic(req, res, url.pathname)) return;
     }
@@ -728,6 +733,42 @@ function sendJson(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
+function appVersionPayload(req) {
+  const baseUrl = publicBaseUrl(req);
+  const latestVersionCode = Number.parseInt(env.APP_VERSION_CODE || '2', 10);
+  const latestVersionName = cleanText(env.APP_VERSION_NAME) || '1.0.1';
+  const apkUrl =
+    cleanText(env.APK_URL) ||
+    `${baseUrl}/downloads/PlantVerse-AI-release.apk`;
+
+  return {
+    platform: 'android',
+    latest_version_name: latestVersionName,
+    latest_version_code: Number.isFinite(latestVersionCode)
+      ? latestVersionCode
+      : 2,
+    min_supported_version_code: Number.parseInt(
+      env.MIN_SUPPORTED_VERSION_CODE || '1',
+      10,
+    ),
+    apk_url: apkUrl,
+    force_update: env.FORCE_APP_UPDATE === 'true',
+    release_notes: [
+      'Improved pine succulent identification.',
+      'Added Miniature Pine Tree / Crassula tetragona offline profile.',
+      'Keeps cloud-backed plant intelligence connected to the public backend.',
+    ],
+  };
+}
+
+function publicBaseUrl(req) {
+  const configured = cleanText(env.PUBLIC_BASE_URL);
+  if (configured) return configured.replace(/\/+$/, '');
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}`;
+}
+
 async function serveStatic(req, res, requestPath) {
   const indexPath = path.join(publicDir, 'index.html');
   if (!fs.existsSync(indexPath)) return false;
@@ -800,6 +841,8 @@ function contentType(filePath) {
       return 'application/wasm';
     case '.ico':
       return 'image/x-icon';
+    case '.apk':
+      return 'application/vnd.android.package-archive';
     default:
       return 'application/octet-stream';
   }

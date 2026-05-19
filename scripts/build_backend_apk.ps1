@@ -1,6 +1,10 @@
 param(
   [Parameter(Mandatory = $true)]
-  [string]$BackendBaseUrl
+  [string]$BackendBaseUrl,
+
+  [string]$AppVersionName = '1.0.1',
+
+  [int]$AppVersionCode = 2
 )
 
 Set-StrictMode -Version Latest
@@ -14,7 +18,10 @@ try {
     $flutter = 'flutter'
   }
 
-  & $flutter build apk --release --no-pub "--dart-define=BACKEND_BASE_URL=$BackendBaseUrl"
+  & $flutter build apk --release --no-pub `
+    "--dart-define=BACKEND_BASE_URL=$BackendBaseUrl" `
+    "--dart-define=APP_VERSION_NAME=$AppVersionName" `
+    "--dart-define=APP_VERSION_CODE=$AppVersionCode"
 
   New-Item -ItemType Directory -Force -Path 'mobile-apk' | Out-Null
   Copy-Item -LiteralPath 'build\app\outputs\flutter-apk\app-release.apk' `

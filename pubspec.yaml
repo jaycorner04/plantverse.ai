@@ -1,7 +1,7 @@
 name: plantverse_ai
 description: A modern AI-powered mobile application for plant identification and care.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

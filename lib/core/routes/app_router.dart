@@ -10,13 +10,13 @@ import '../../screens/scanner_screen.dart';
 import '../../screens/plant_details_screen.dart';
 import '../../screens/ai_doctor_screen.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
     GlobalKey<NavigatorState>();
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     routes: [
       GoRoute(
@@ -39,13 +39,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/scanner',
         name: 'scanner',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const ScannerScreen(),
       ),
       GoRoute(
         path: '/plant_details',
         name: 'plant_details',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const PlantDetailsScreen(),
       ),
 
