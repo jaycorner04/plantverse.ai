@@ -70,17 +70,20 @@ Other API errors are shown as errors instead of silently switching modes.
 Optional backup providers can be configured with your own free/limited keys:
 
 ```bash
-PLANTNET_API_KEY=your_plantnet_key
-PLANT_ID_API_KEY=your_plant_id_key
-PERENUAL_API_KEY=your_perenual_key
+GEMINI_API_KEY=your_gemini_key
 GROQ_API_KEY=your_groq_key
 GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+PLANT_ID_API_KEY=your_plantid_key
+PERENUAL_API_KEY=your_perenual_key
 ```
 
 PlantVerse uses them in this order: Gemini first, then Groq vision, then
-Pl@ntNet, then Plant.id. Perenual is used to enrich care data after a backup
-provider returns a plant name. If all configured cloud providers are unavailable
-or out of quota, the app uses the packaged offline catalog/taxonomy mode.
+Pl@ntNet, then Plant.id. Plant.id is called through the v3 identification
+endpoint first, with a compatibility fallback for accounts that still answer
+through the older v2 identify route. Perenual is used to enrich care data after
+a backup provider returns a plant name. If all configured cloud providers are
+unavailable or out of quota, the app uses the packaged offline catalog/taxonomy
+mode.
 
 For exact cloud species recognition and photo-specific diagnosis, add your own
 Gemini API key in a local `.env` file:

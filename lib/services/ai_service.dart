@@ -394,7 +394,12 @@ Use confidence from 0 to 1.
     }
 
     if (failures.isEmpty) return null;
-    return null;
+    return _offlineCatalogProfile(
+      imageBytes: imageBytes,
+      fileName: fileName,
+      fallbackReason:
+          '$fallbackReason Backup providers failed: ${failures.join(' | ')}',
+    );
   }
 
   Future<Map<String, dynamic>> _identifyWithGroq({
@@ -559,6 +564,96 @@ common_name to "Unknown" and confidence below 0.3.
     required String fileName,
     required String fallbackReason,
   }) async {
+    try {
+      return await _identifyWithPlantIdV3(
+        imageBytes: imageBytes,
+        fileName: fileName,
+      );
+    } catch (v3Error) {
+      try {
+        return await _identifyWithPlantIdV2(
+          imageBytes: imageBytes,
+          fileName: fileName,
+        );
+      } catch (v2Error) {
+        throw AiServiceException(
+          'Plant.id v3 failed: $v3Error; Plant.id v2 failed: $v2Error',
+        );
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _identifyWithPlantIdV3({
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
+    final response = await http.post(
+      Uri.parse('https://api.plant.id/v3/identification'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Api-Key': _plantIdApiKey,
+      },
+      body: jsonEncode({
+        'images': ['data:image/jpeg;base64,${base64Encode(imageBytes)}'],
+        'similar_images': true,
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AiServiceException(
+        'Plant.id request failed with status ${response.statusCode}.',
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final result = data['result'];
+    final classification = result is Map ? result['classification'] : null;
+    final suggestions =
+        classification is Map ? classification['suggestions'] : null;
+    if (suggestions is! List ||
+        suggestions.isEmpty ||
+        suggestions.first is! Map) {
+      throw const AiServiceException('Plant.id returned no plant match.');
+    }
+
+    final top = (suggestions.first as Map).cast<String, dynamic>();
+    final scientificName = _cleanText(top['name']);
+    if (scientificName.isEmpty) {
+      throw const AiServiceException('Plant.id returned no scientific name.');
+    }
+    final details = (top['details'] as Map?)?.cast<String, dynamic>() ?? {};
+    final commonNames = details['common_names'] is List
+        ? (details['common_names'] as List)
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : <String>[];
+    final taxonomy = (details['taxonomy'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final family = _cleanText(
+      taxonomy['family'],
+      fallback: 'Plant family not listed',
+    );
+    final confidence = (top['probability'] is num)
+        ? (top['probability'] as num).clamp(0, 1).toDouble()
+        : 0.50;
+
+    final profile = _externalIdentityProfile(
+      provider: 'Plant.id',
+      sourceUrl: 'https://www.kindwise.com/plant-id',
+      commonName: commonNames.isNotEmpty ? commonNames.first : scientificName,
+      scientificName: scientificName,
+      family: family,
+      genus: scientificName.split(' ').first,
+      confidence: confidence,
+    );
+    return _maybeEnrichWithPerenual(profile, scientificName);
+  }
+
+  Future<Map<String, dynamic>> _identifyWithPlantIdV2({
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
     final response = await http.post(
       Uri.parse('https://api.plant.id/v2/identify'),
       headers: {
@@ -573,7 +668,7 @@ common_name to "Unknown" and confidence below 0.3.
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AiServiceException(
-        'Plant.id request failed with status ${response.statusCode}.',
+        'Plant.id v2 request failed with status ${response.statusCode}.',
       );
     }
 
@@ -582,13 +677,15 @@ common_name to "Unknown" and confidence below 0.3.
     if (suggestions is! List ||
         suggestions.isEmpty ||
         suggestions.first is! Map) {
-      throw const AiServiceException('Plant.id returned no plant match.');
+      throw const AiServiceException('Plant.id v2 returned no plant match.');
     }
 
     final top = (suggestions.first as Map).cast<String, dynamic>();
     final scientificName = _cleanText(top['plant_name']);
     if (scientificName.isEmpty) {
-      throw const AiServiceException('Plant.id returned no scientific name.');
+      throw const AiServiceException(
+        'Plant.id v2 returned no scientific name.',
+      );
     }
     final details =
         (top['plant_details'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -609,7 +706,7 @@ common_name to "Unknown" and confidence below 0.3.
         : 0.50;
 
     final profile = _externalIdentityProfile(
-      provider: 'Plant.id',
+      provider: 'Plant.id v2',
       sourceUrl: 'https://www.kindwise.com/plant-id',
       commonName: commonNames.isNotEmpty ? commonNames.first : scientificName,
       scientificName: scientificName,
