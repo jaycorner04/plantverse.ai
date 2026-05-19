@@ -33,6 +33,8 @@ class AiService {
   static const _definedPerenualKey = String.fromEnvironment('PERENUAL_API_KEY');
   static const _definedGroqKey = String.fromEnvironment('GROQ_API_KEY');
   static const _definedGroqModel = String.fromEnvironment('GROQ_VISION_MODEL');
+  static const _definedOpenRouterKey =
+      String.fromEnvironment('OPENROUTER_API_KEY');
 
   Map<String, String> get _env => dotenv.isInitialized ? dotenv.env : const {};
   String _envValue(String key, String definedValue) {
@@ -48,6 +50,8 @@ class AiService {
   String get _perenualApiKey =>
       _envValue('PERENUAL_API_KEY', _definedPerenualKey);
   String get _groqApiKey => _envValue('GROQ_API_KEY', _definedGroqKey);
+  String get _openRouterApiKey =>
+      _envValue('OPENROUTER_API_KEY', _definedOpenRouterKey);
   String get _groqVisionModel {
     final model = _envValue('GROQ_VISION_MODEL', _definedGroqModel);
     return model.isNotEmpty
@@ -66,6 +70,7 @@ class AiService {
   bool get hasLiveProvider =>
       isConfigured ||
       _groqApiKey.isNotEmpty ||
+      _openRouterApiKey.isNotEmpty ||
       _plantNetApiKey.isNotEmpty ||
       _plantIdApiKey.isNotEmpty;
 
@@ -73,14 +78,20 @@ class AiService {
     required Uint8List imageBytes,
     required String fileName,
   }) async {
-    if (_apiKey.isEmpty && _groqApiKey.isNotEmpty) {
-      final result = await _identifyWithGroq(
+    if (_apiKey.isEmpty &&
+        (_groqApiKey.isNotEmpty || _openRouterApiKey.isNotEmpty)) {
+      final external = await _identifyWithExternalProviders(
         imageBytes: imageBytes,
         fileName: fileName,
         fallbackReason: '',
       );
-      result['recognition_mode'] = 'groq_vision';
-      return result;
+      if (external != null) return external;
+
+      return _offlineCatalogProfile(
+        imageBytes: imageBytes,
+        fileName: fileName,
+        fallbackReason: 'No Gemini key is configured.',
+      );
     }
 
     if (!isConfigured) {
@@ -377,6 +388,19 @@ Use confidence from 0 to 1.
       }
     }
 
+    if (_openRouterApiKey.isNotEmpty) {
+      try {
+        final profile = await _identifyWithOpenRouter(
+          imageBytes: imageBytes,
+          fileName: fileName,
+          fallbackReason: fallbackReason,
+        );
+        return _withFallbackReason(profile, fallbackReason);
+      } catch (error) {
+        failures.add('OpenRouter unavailable: $error');
+      }
+    }
+
     if (_plantNetApiKey.isNotEmpty) {
       try {
         final profile = await _identifyWithPlantNet(
@@ -518,6 +542,79 @@ Return only raw JSON. No markdown. No code blocks.
     }
     result['recognition_mode'] = 'groq_vision';
     result['reference_sources'] = ['Groq vision AI: https://console.groq.com'];
+    return result;
+  }
+
+  Future<Map<String, dynamic>> _identifyWithOpenRouter({
+    required Uint8List imageBytes,
+    required String fileName,
+    required String fallbackReason,
+  }) async {
+    final response = await http.post(
+      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_openRouterApiKey',
+      },
+      body: jsonEncode({
+        'model': 'meta-llama/llama-4-maverick:free',
+        'max_tokens': 4000,
+        'temperature': 0,
+        'messages': [
+          {
+            'role': 'user',
+            'content': [
+              {
+                'type': 'image_url',
+                'image_url': {
+                  'url':
+                      'data:${_mimeType(fileName)};base64,${base64Encode(imageBytes)}',
+                },
+              },
+              {
+                'type': 'text',
+                'text': '''
+Identify the plant in this image. Return only valid JSON with:
+common_name, scientific_name, family, confidence, description,
+care_difficulty, native_region, toxicity_level, toxicity_score,
+water_requirement, water_score, sunlight_requirement, sunlight_score,
+temperature_range, humidity_level, humidity_score, photosynthesis_score,
+oxygen_output, air_intake, air_release, health_summary, story_markdown,
+human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
+environmental_intelligence.
+Return only raw JSON. No markdown. No code blocks.
+'''
+              },
+            ],
+          }
+        ],
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = _openAiStyleError(response, 'OpenRouter');
+      if (_isQuotaLimit(response.statusCode, message)) {
+        throw AiQuotaLimitException(message);
+      }
+      throw AiServiceException(message);
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final choices = data['choices'];
+    if (choices is! List || choices.isEmpty || choices.first is! Map) {
+      throw const AiServiceException('OpenRouter returned no result.');
+    }
+    final message = (choices.first as Map)['message'];
+    final content = message is Map ? message['content'] : null;
+    if (content is! String || content.trim().isEmpty) {
+      throw const AiServiceException('OpenRouter returned empty answer.');
+    }
+
+    final result = _decodeObject(content);
+    result['recognition_mode'] = 'openrouter_vision';
+    result['reference_sources'] = [
+      'OpenRouter AI: https://openrouter.ai',
+    ];
     return result;
   }
 
