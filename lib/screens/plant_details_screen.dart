@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../animations/staggered_reveal.dart';
 import '../core/constants/app_colors.dart';
+import '../core/performance/performance_mode.dart';
+import '../features/plant_details/plant_biology_metrics.dart';
 import '../services/scan_result_store.dart';
 import '../widgets/immersive_background.dart';
 
@@ -96,6 +98,8 @@ class PlantDetailsScreen extends ConsumerWidget {
         'oxygen_output',
         'Small but steady oxygen contribution while leaves receive enough light; exact output varies with plant size and health.',
       );
+  PlantOxygenMetrics get _oxygenMetrics =>
+      PlantOxygenMetrics.fromResult(result);
 
   double get _confidence => _score('confidence', 0.72);
   double get _toxicityScore => _score('toxicity_score', _toxicityFallback());
@@ -169,6 +173,7 @@ class PlantDetailsScreen extends ConsumerWidget {
   }
 
   Widget _hero(BuildContext context) {
+    final performanceMode = plantVersePerformanceMode(context);
     return SizedBox(
       height: 500,
       child: Stack(
@@ -188,7 +193,8 @@ class PlantDetailsScreen extends ConsumerWidget {
               ),
             ),
           ),
-          const Positioned.fill(child: _OxygenParticleField()),
+          if (!performanceMode)
+            const Positioned.fill(child: _OxygenParticleField()),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -593,6 +599,8 @@ class PlantDetailsScreen extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 420;
+        final performanceMode = plantVersePerformanceMode(context);
+        final oxygenMetrics = _oxygenMetrics;
         final ring = _ScienceRing(
           score: _photosynthesisScore,
           color: AppColors.actionBlueOnDark,
@@ -606,14 +614,7 @@ class PlantDetailsScreen extends ConsumerWidget {
             _sectionEyebrow('Oxygen production'),
             const SizedBox(height: 8),
             Text(
-              _text(
-                [
-                  'environmental_intelligence',
-                  'oxygen',
-                  'estimated_daily_release'
-                ],
-                _oxygenOutput,
-              ),
+              _oxygenOutput,
               textAlign: compact ? TextAlign.center : TextAlign.left,
               style: TextStyle(
                 color: AppColors.pureWhite,
@@ -623,12 +624,29 @@ class PlantDetailsScreen extends ConsumerWidget {
                 letterSpacing: -0.2,
               ),
             ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: compact ? WrapAlignment.center : WrapAlignment.start,
+              children: [
+                _OxygenAmountChip(
+                  label: 'Per hour',
+                  value: oxygenMetrics.hourlyEstimate,
+                ),
+                _OxygenAmountChip(
+                  label: 'Per day',
+                  value: oxygenMetrics.dailyEstimate,
+                ),
+              ],
+            ),
           ],
         );
 
         return Stack(
           children: [
-            const Positioned.fill(child: _OxygenParticleField()),
+            if (!performanceMode)
+              const Positioned.fill(child: _OxygenParticleField()),
             Padding(
               padding: EdgeInsets.symmetric(vertical: compact ? 8 : 0),
               child: compact
@@ -1818,6 +1836,33 @@ class _InteractiveScienceCardState extends State<_InteractiveScienceCard> {
 
   @override
   Widget build(BuildContext context) {
+    final performanceMode = plantVersePerformanceMode(context);
+    final staticCard = Container(
+      width: double.infinity,
+      padding: widget.padding,
+      decoration: BoxDecoration(
+        color: AppColors.pureWhite.withOpacity(0.070),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: widget.glowColor.withOpacity(0.11)),
+        boxShadow: performanceMode
+            ? const []
+            : [
+                BoxShadow(
+                  color: widget.glowColor.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 12),
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.24),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+      ),
+      child: widget.child,
+    );
+    if (performanceMode) return staticCard;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -1916,12 +1961,73 @@ class _ScienceRing extends StatelessWidget {
           );
         },
       ),
-    ).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(
-          begin: const Offset(1, 1),
-          end: const Offset(1.035, 1.035),
-          duration: 1800.ms,
-          curve: Curves.easeInOut,
-        );
+    );
+  }
+}
+
+class _OxygenAmountChip extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _OxygenAmountChip({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 260),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.actionBlueOnDark.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.actionBlueOnDark.withOpacity(0.22),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.bubble_chart_rounded,
+            color: AppColors.actionBlueOnDark,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.pureWhite.withOpacity(0.56),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.pureWhite,
+                    fontSize: 12.5,
+                    height: 1.25,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

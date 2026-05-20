@@ -55,7 +55,7 @@ class OfflinePlantCatalog {
       'humidity_score': humidityScore,
       'photosynthesis_score': photosynthesisScore,
       'oxygen_output':
-          '${plant.commonName} may release a small amount of oxygen during daylight photosynthesis. Estimate: ${plant.oxygenEstimate}, changing with leaf area, light, water, and maturity.',
+          '${plant.commonName} may release a small amount of oxygen during daylight photosynthesis. Estimate: ${plant.oxygenEstimate}; ${_dailyOxygenEstimate(plant.oxygenEstimate)}, changing with leaf area, light, water, and maturity.',
       'air_intake': 'Carbon dioxide, light energy, and water.',
       'air_release': 'Oxygen and water vapor during active photosynthesis.',
       'health_summary':
@@ -135,7 +135,8 @@ class OfflinePlantCatalog {
       'environmental_intelligence': {
         'oxygen': {
           'score': photosynthesisScore,
-          'estimated_daily_release': plant.oxygenEstimate,
+          'estimated_hourly_release': plant.oxygenEstimate,
+          'estimated_daily_release': _dailyOxygenEstimate(plant.oxygenEstimate),
           'day_vs_night':
               'Oxygen release happens mainly in daylight. At night the plant still respires and consumes a tiny amount of oxygen.',
           'air_purification_score': plant.airPurificationScore,
@@ -162,6 +163,37 @@ class OfflinePlantCatalog {
         }
       }
     };
+  }
+
+  static String _dailyOxygenEstimate(String hourlyEstimate) {
+    final range = RegExp(
+      r'(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\s*mL',
+      caseSensitive: false,
+    ).firstMatch(hourlyEstimate);
+    if (range != null) {
+      final low = double.tryParse(range.group(1) ?? '');
+      final high = double.tryParse(range.group(2) ?? '');
+      if (low != null && high != null) {
+        return 'about ${_formatMl(low * 12)}-${_formatMl(high * 12)} mL oxygen/day assuming 12 productive light hours';
+      }
+    }
+
+    final single = RegExp(
+      r'(\d+(?:\.\d+)?)\s*mL',
+      caseSensitive: false,
+    ).firstMatch(hourlyEstimate);
+    final value = double.tryParse(single?.group(1) ?? '');
+    if (value != null) {
+      return 'about ${_formatMl(value * 12)} mL oxygen/day assuming 12 productive light hours';
+    }
+
+    return 'daily oxygen output varies with leaf area, light intensity, and active growth';
+  }
+
+  static String _formatMl(double value) {
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)} L';
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(1);
   }
 
   static final List<_OfflinePlant> _plants = [

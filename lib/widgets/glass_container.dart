@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../core/performance/performance_mode.dart';
 
 class GlassContainer extends StatelessWidget {
   final Widget child;
@@ -33,6 +34,18 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final performanceMode = plantVersePerformanceMode(context);
+    final content = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: gradient == null
+            ? (color ?? Colors.white).withOpacity(opacity)
+            : null,
+        gradient: gradient,
+      ),
+      child: child,
+    );
+
     return Container(
       margin: margin,
       width: width,
@@ -54,19 +67,12 @@ class GlassContainer extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: borderRadius ?? BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: gradient == null
-                  ? (color ?? Colors.white).withOpacity(opacity)
-                  : null,
-              gradient: gradient,
-            ),
-            child: child,
-          ),
-        ),
+        child: performanceMode || blur <= 0
+            ? content
+            : BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+                child: content,
+              ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/performance/performance_mode.dart';
 
 class ImmersiveBackground extends StatelessWidget {
   final Widget child;
@@ -13,6 +14,7 @@ class ImmersiveBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final performanceMode = plantVersePerformanceMode(context);
     return Stack(
       children: [
         const Positioned.fill(
@@ -29,40 +31,44 @@ class ImmersiveBackground extends StatelessWidget {
             ),
           ),
         ),
-        const Positioned(
-          top: -130,
-          left: -120,
-          child: _GlowOrb(
-            size: 320,
-            color: AppColors.emeraldGreen,
-            opacity: 0.16,
-          ),
-        ),
-        const Positioned(
-          top: 160,
-          right: -150,
-          child: _GlowOrb(
-            size: 330,
-            color: AppColors.aiGlow,
-            opacity: 0.11,
-          ),
-        ),
-        const Positioned(
-          bottom: -170,
-          left: 40,
-          child: _GlowOrb(
-            size: 300,
-            color: AppColors.forestGreen,
-            opacity: 0.10,
-          ),
-        ),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _ParticlePainter(),
+        if (!performanceMode) ...[
+          const Positioned(
+            top: -130,
+            left: -120,
+            child: _GlowOrb(
+              size: 320,
+              color: AppColors.emeraldGreen,
+              opacity: 0.16,
             ),
           ),
-        ),
+          const Positioned(
+            top: 160,
+            right: -150,
+            child: _GlowOrb(
+              size: 330,
+              color: AppColors.aiGlow,
+              opacity: 0.11,
+            ),
+          ),
+          const Positioned(
+            bottom: -170,
+            left: 40,
+            child: _GlowOrb(
+              size: 300,
+              color: AppColors.forestGreen,
+              opacity: 0.10,
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: _ParticlePainter(),
+                ),
+              ),
+            ),
+          ),
+        ],
         child,
       ],
     );

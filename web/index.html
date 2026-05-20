@@ -18,30 +18,50 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="PlantVerse AI plant intelligence dashboard.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="project2">
+  <meta name="apple-mobile-web-app-title" content="PlantVerse AI">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>project2</title>
+  <title>PlantVerse AI</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html, body {
+      background: #020f0b;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #plantverse-loader {
+      align-items: center;
+      color: #ecfff8;
+      display: flex;
+      font: 700 15px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      height: 100%;
+      justify-content: center;
+      letter-spacing: 0;
+    }
+  </style>
 
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
 <body>
+  <div id="plantverse-loader">Loading PlantVerse AI...</div>
   <script>
     window.addEventListener('load', function(ev) {
-      // Download main.dart.js
       _flutter.loader.loadEntrypoint({
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
+            document.getElementById('plantverse-loader')?.remove();
             appRunner.runApp();
           });
         }

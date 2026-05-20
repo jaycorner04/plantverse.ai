@@ -88607,7 +88607,7 @@ A.aaA.prototype={
 $2(a,b){var s,r,q,p,o=null,n=b.b<420,m=this.a,l=m.gRl(),k=new A.oh(l,B.al,"O2",n?118:96,o)
 l=n?B.w:B.L
 s=m.ze("Oxygen production")
-m=m.bl(A.a(["environmental_intelligence","oxygen","estimated_daily_release"],t.s),m.e1("oxygen_output","Small but steady oxygen contribution while leaves receive enough light; exact output varies with plant size and health."))
+m=m.e1("oxygen_output",m.bl(A.a(["environmental_intelligence","oxygen","estimated_daily_release"],t.s),"Small but steady oxygen contribution while leaves receive enough light; exact output varies with plant size and health. New scans include estimated oxygen per hour and per day."))
 r=n?B.bg:B.fd
 q=t.p
 p=A.bi(A.a([s,B.cQ,A.aD(m,o,o,o,A.br(o,o,B.i,o,o,o,o,o,o,o,o,n?17:18,o,o,B.ay,o,1.35,!0,o,-0.2,o,o,o,o,o,o),r,o)],q),l,B.m,B.n)

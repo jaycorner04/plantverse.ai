@@ -199,15 +199,17 @@ temperature: {score, minimum_temperature, maximum_temperature,
 best_growth_temperature, winter_survival}.
 
 environmental_intelligence must be an object with:
-oxygen: {score, estimated_daily_release, day_vs_night, air_purification_score,
-indoor_contribution, nasa_clean_air_relevance, photosynthesis_efficiency,
-approximation_logic},
+oxygen: {score, estimated_hourly_release, estimated_daily_release,
+day_vs_night, air_purification_score, indoor_contribution,
+nasa_clean_air_relevance, photosynthesis_efficiency, approximation_logic},
 co2: {score, estimated_daily_absorption, photosynthesis_cycle,
 carbon_capture_efficiency, indoor_air_improvement},
 biology: {photosynthesis_type, transpiration_details, root_oxygen_exchange,
 growth_respiration_details}.
 
 All estimates must be scientifically styled, realistic, and human readable.
+Oxygen estimates must include an hourly mL/hour range and a daily mL/day range,
+using about 12 productive light hours unless the plant is clearly a CAM plant.
 When exact values are unavailable, provide estimated ranges and explain the
 approximation logic. Do not diagnose serious human or animal medical issues;
 use first aid and vet/poison-control guidance for safety only.
@@ -630,13 +632,16 @@ temperature: {score, minimum_temperature, maximum_temperature,
 best_growth_temperature, winter_survival}.
 
 environmental_intelligence must be an object with:
-oxygen: {score, estimated_daily_release, day_vs_night, air_purification_score,
-indoor_contribution, nasa_clean_air_relevance, photosynthesis_efficiency,
-approximation_logic},
+oxygen: {score, estimated_hourly_release, estimated_daily_release,
+day_vs_night, air_purification_score, indoor_contribution,
+nasa_clean_air_relevance, photosynthesis_efficiency, approximation_logic},
 co2: {score, estimated_daily_absorption, photosynthesis_cycle,
 carbon_capture_efficiency, indoor_air_improvement},
 biology: {photosynthesis_type, transpiration_details, root_oxygen_exchange,
 growth_respiration_details}.
+
+Oxygen estimates must include an hourly mL/hour range and a daily mL/day range,
+using about 12 productive light hours unless the plant is clearly a CAM plant.
 
 If the image is not a plant, set common_name to Unknown and explain in description.
 $_knownVisualConfusionGuidance
@@ -724,6 +729,8 @@ temperature_range, humidity_level, humidity_score, photosynthesis_score,
 oxygen_output, air_intake, air_release, health_summary, story_markdown,
 human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
 environmental_intelligence.
+environmental_intelligence.oxygen must include estimated_hourly_release and
+estimated_daily_release with realistic mL/hour and mL/day ranges.
 $_knownVisualConfusionGuidance
 Return only raw JSON. No markdown. No code blocks.
 '''
@@ -1137,7 +1144,7 @@ Return only raw JSON. No markdown. No code blocks.
       'humidity_score': 0.50,
       'photosynthesis_score': 0.56,
       'oxygen_output':
-          'Offline estimate: a small indoor plant may release a modest amount of oxygen during bright daylight, but exact output depends on species, leaf area, light, and health.',
+          'Offline estimate: roughly 2-10 mL oxygen/hour, or about 24-120 mL/day assuming 12 productive light hours. Exact output depends on species, leaf area, light, and health.',
       'air_intake': 'Carbon dioxide, light energy, and water.',
       'air_release': 'Oxygen and water vapor during daylight photosynthesis.',
       'health_summary':
@@ -1225,8 +1232,10 @@ Return only raw JSON. No markdown. No code blocks.
       'environmental_intelligence': {
         'oxygen': {
           'score': 0.56,
+          'estimated_hourly_release':
+              'Approx. 2-10 mL oxygen/hour for a small healthy indoor plant in bright light.',
           'estimated_daily_release':
-              'Small indoor oxygen contribution during bright daylight; exact liters vary by species and leaf area.',
+              'Approx. 24-120 mL oxygen/day, assuming about 12 productive light hours.',
           'day_vs_night':
               'Oxygen release rises in daylight and drops at night while respiration continues.',
           'air_purification_score': 0.38,

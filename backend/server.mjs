@@ -45,13 +45,18 @@ temperature: {score, minimum_temperature, maximum_temperature,
 best_growth_temperature, winter_survival}.
 
 environmental_intelligence must be an object with:
-oxygen: {score, estimated_daily_release, day_vs_night, air_purification_score,
-indoor_contribution, nasa_clean_air_relevance, photosynthesis_efficiency,
-approximation_logic},
+oxygen: {score, estimated_hourly_release, estimated_daily_release,
+day_vs_night, air_purification_score, indoor_contribution,
+nasa_clean_air_relevance, photosynthesis_efficiency, approximation_logic},
 co2: {score, estimated_daily_absorption, photosynthesis_cycle,
 carbon_capture_efficiency, indoor_air_improvement},
 biology: {photosynthesis_type, transpiration_details, root_oxygen_exchange,
 growth_respiration_details}.
+
+estimated_hourly_release and estimated_daily_release must include realistic
+approximate ranges in mL, for example "2-6 mL oxygen/hour" and
+"24-72 mL oxygen/day assuming about 12 productive light hours". Clearly state
+that values vary with leaf area, light intensity, humidity, and plant maturity.
 
 Known visual confusion rule:
 If the image shows an upright pine-like succulent with narrow pointed green
@@ -569,6 +574,10 @@ async function identifyWithPlantIdV2({ imageBase64 }) {
 }
 
 function identityProfile({ provider, sourceUrl, commonName, scientificName, family, confidence }) {
+  const hourlyOxygen =
+    'Approx. 2-8 mL oxygen/hour for a small healthy indoor plant in bright light.';
+  const dailyOxygen =
+    'Approx. 24-96 mL oxygen/day, assuming about 12 productive light hours.';
   return {
     common_name: commonName,
     scientific_name: scientificName,
@@ -591,13 +600,31 @@ function identityProfile({ provider, sourceUrl, commonName, scientificName, fami
     humidity_score: 0.50,
     photosynthesis_score: 0.55,
     oxygen_output:
-      'Approximate indoor oxygen contribution during daylight; exact output depends on species, leaf area, light, and plant health.',
+      `${hourlyOxygen} ${dailyOxygen} Exact output depends on species, leaf area, light, and plant health.`,
     air_intake: 'Carbon dioxide, light energy, and water.',
     air_release: 'Oxygen and water vapor during daylight photosynthesis.',
     health_summary:
       'Identification came from a backup plant provider. Use conservative care until richer botanical references are attached.',
     story_markdown:
       `${commonName} was identified by ${provider}. Treat it as a living system: observe light, soil moisture, and new growth before making major care changes.`,
+    environmental_intelligence: {
+      oxygen: {
+        score: 0.55,
+        estimated_hourly_release: hourlyOxygen,
+        estimated_daily_release: dailyOxygen,
+        day_vs_night:
+          'Most oxygen release happens during active photosynthesis in bright daylight; at night the plant mainly respires.',
+        air_purification_score: 0.38,
+        indoor_contribution:
+          'Small but measurable biological gas exchange; not a replacement for ventilation.',
+        nasa_clean_air_relevance:
+          'Clean-air relevance depends on exact species, plant density, and room ventilation.',
+        photosynthesis_efficiency:
+          'Moderate estimate until richer species-specific biology data is attached.',
+        approximation_logic:
+          'Estimated from a small-to-medium potted plant, typical indoor leaf area, and about 12 productive light hours.',
+      },
+    },
   };
 }
 
@@ -756,6 +783,8 @@ function appVersionPayload(req) {
     release_notes: [
       'Improved pine succulent identification.',
       'Warms PlantVerse cloud on app launch to reduce first-scan lag.',
+      'Adds hourly and daily oxygen estimates in Plant Details.',
+      'Reduces mobile web animation and glass blur for smoother scanning.',
       'Shows scan progress while cloud AI is working.',
       'Added Miniature Pine Tree / Crassula tetragona offline profile.',
     ],
