@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../widgets/lucide_compat.dart';
 import '../animations/staggered_reveal.dart';
 import '../core/constants/app_colors.dart';
 import '../widgets/glass_container.dart';
@@ -78,7 +78,7 @@ class HomeScreen extends StatelessWidget {
                   color: AppColors.pureWhite,
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
+                  letterSpacing: 0,
                 ),
               ),
             ),
@@ -114,7 +114,7 @@ class HomeScreen extends StatelessWidget {
               fontSize: titleSize,
               height: 0.98,
               fontWeight: FontWeight.w800,
-              letterSpacing: -2,
+              letterSpacing: 0,
             ),
           ).animate().fadeIn(duration: 800.ms).slideY(begin: 0.16, end: 0),
           const SizedBox(height: 18),
@@ -126,7 +126,7 @@ class HomeScreen extends StatelessWidget {
               fontSize: 17,
               height: 1.55,
               fontWeight: FontWeight.w500,
-              letterSpacing: -0.1,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 26),
@@ -266,7 +266,7 @@ class HomeScreen extends StatelessWidget {
                       color: AppColors.pureWhite,
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -396,7 +396,7 @@ class HomeScreen extends StatelessWidget {
                 height: 1.08,
                 fontWeight: FontWeight.w800,
                 color: AppColors.pureWhite,
-                letterSpacing: -0.4,
+                letterSpacing: 0,
               ),
             ),
           ],

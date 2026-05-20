@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../widgets/lucide_compat.dart';
 import '../core/constants/app_colors.dart';
 import '../services/ai_service.dart';
 import '../services/scan_result_store.dart';
@@ -378,7 +378,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                         fontSize: 16,
                         height: 1.35,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2,
+                        letterSpacing: 0,
                       ),
                     ),
                     const SizedBox(height: 26),

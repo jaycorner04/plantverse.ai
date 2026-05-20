@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../widgets/lucide_compat.dart';
 import '../core/constants/app_colors.dart';
 import '../services/ai_service.dart';
 
@@ -145,7 +145,7 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
               fontSize: 32,
               fontWeight: FontWeight.w600,
               color: AppColors.softBlack,
-              letterSpacing: -0.3,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 10),
@@ -157,7 +157,7 @@ class _AiDoctorScreenState extends ConsumerState<AiDoctorScreen> {
               fontSize: 17,
               height: 1.45,
               color: AppColors.softBlack.withOpacity(0.64),
-              letterSpacing: -0.2,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 32),

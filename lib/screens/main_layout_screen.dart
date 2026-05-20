@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../widgets/lucide_compat.dart';
 import '../core/constants/app_colors.dart';
 import '../widgets/glass_container.dart';
 

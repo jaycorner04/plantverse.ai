@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../widgets/lucide_compat.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../core/constants/app_colors.dart';
 import '../widgets/glass_container.dart';
@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontSize: 32,
                       fontWeight: FontWeight.w600,
                       color: AppColors.softBlack,
-                      letterSpacing: -0.3,
+                      letterSpacing: 0,
                     ),
                     textAlign: TextAlign.center,
                   ).animate().fadeIn(delay: 200.ms),
