@@ -57,6 +57,8 @@ estimated_hourly_release and estimated_daily_release must include realistic
 approximate ranges in mL, for example "2-6 mL oxygen/hour" and
 "24-72 mL oxygen/day assuming about 12 productive light hours". Clearly state
 that values vary with leaf area, light intensity, humidity, and plant maturity.
+oxygen_output must summarize both the hourly and daily oxygen estimates in one
+plain-language sentence.
 
 Known visual confusion rule:
 If the image shows an upright pine-like succulent with narrow pointed green

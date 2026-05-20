@@ -210,6 +210,8 @@ growth_respiration_details}.
 All estimates must be scientifically styled, realistic, and human readable.
 Oxygen estimates must include an hourly mL/hour range and a daily mL/day range,
 using about 12 productive light hours unless the plant is clearly a CAM plant.
+oxygen_output must summarize both the hourly and daily oxygen estimates in one
+plain-language sentence.
 When exact values are unavailable, provide estimated ranges and explain the
 approximation logic. Do not diagnose serious human or animal medical issues;
 use first aid and vet/poison-control guidance for safety only.
@@ -642,6 +644,8 @@ growth_respiration_details}.
 
 Oxygen estimates must include an hourly mL/hour range and a daily mL/day range,
 using about 12 productive light hours unless the plant is clearly a CAM plant.
+oxygen_output must summarize both the hourly and daily oxygen estimates in one
+plain-language sentence.
 
 If the image is not a plant, set common_name to Unknown and explain in description.
 $_knownVisualConfusionGuidance
