@@ -88843,7 +88843,7 @@ break
 case 7:case 1:return A.K(q,r)
 case 2:return A.J(o,r)}})
 return A.L($async$u6,r)},
-air(){var s=this,r={},q=s.gjJ().hJ($.rx(),t.UX).cz("BACKEND_BASE_URL","https://plantverse-ai.onrender.com"),p=A.aJ("/+$",!0,!1,!1),o=A.bp(q,p,"").length!==0?B.IQ:B.Io
+air(){var s=this,r={},q=s.gjJ().hJ($.rx(),t.UX).cz("BACKEND_BASE_URL","https://dj2i5my9uyve1.cloudfront.net"),p=A.aJ("/+$",!0,!1,!1),o=A.bp(q,p,"").length!==0?B.IQ:B.Io
 r.a=0
 q=s.at
 if(q!=null)q.aI()
@@ -88900,7 +88900,7 @@ A.aoJ.prototype={
 $0(){var s,r,q=this.a
 q.z=this.b
 q.y=!0
-s=q.gjJ().hJ($.rx(),t.UX).cz("BACKEND_BASE_URL","https://plantverse-ai.onrender.com")
+s=q.gjJ().hJ($.rx(),t.UX).cz("BACKEND_BASE_URL","https://dj2i5my9uyve1.cloudfront.net")
 r=A.aJ("/+$",!0,!1,!1)
 q.Q=A.bp(s,r,"").length!==0?"Waking PlantVerse cloud...":"Identifying flora..."
 q.as=null},
@@ -89016,11 +89016,11 @@ if(s==null)s=""
 if(s.length!==0)return s
 r=B.c.c9("")
 return r.length!==0?r:"gemini-2.0-flash-lite"},
-gX6(){var s=this,r=s.cz("BACKEND_BASE_URL","https://plantverse-ai.onrender.com"),q=A.aJ("/+$",!0,!1,!1)
+gX6(){var s=this,r=s.cz("BACKEND_BASE_URL","https://dj2i5my9uyve1.cloudfront.net"),q=A.aJ("/+$",!0,!1,!1)
 return A.bp(r,q,"").length!==0||s.cz("GEMINI_API_KEY","").length!==0||s.cz("GROQ_API_KEY","").length!==0||s.cz("OPENROUTER_API_KEY","").length!==0||s.cz("PLANTNET_API_KEY","").length!==0||s.cz("PLANT_ID_API_KEY","").length!==0},
 CP(){var s=0,r=A.M(t.H),q,p=2,o,n=this,m,l,k,j
 var $async$CP=A.I(function(a,b){if(a===1){o=b
-s=p}while(true)switch(s){case 0:l=n.cz("BACKEND_BASE_URL","https://plantverse-ai.onrender.com")
+s=p}while(true)switch(s){case 0:l=n.cz("BACKEND_BASE_URL","https://dj2i5my9uyve1.cloudfront.net")
 k=A.aJ("/+$",!0,!1,!1)
 if(A.bp(l,k,"").length===0){s=1
 break}p=4
@@ -89041,7 +89041,7 @@ return A.L($async$CP,r)},
 mW(a,b){return this.ap4(a,b)},
 ap4(a,b){var s=0,r=A.M(t.P),q,p=2,o,n=this,m,l,k,j,i,h,g,f,e,d,c
 var $async$mW=A.I(function(a0,a1){if(a0===1){o=a1
-s=p}while(true)switch(s){case 0:f=n.cz("BACKEND_BASE_URL","https://plantverse-ai.onrender.com")
+s=p}while(true)switch(s){case 0:f=n.cz("BACKEND_BASE_URL","https://dj2i5my9uyve1.cloudfront.net")
 e=A.aJ("/+$",!0,!1,!1)
 s=A.bp(f,e,"").length!==0?3:4
 break
@@ -89128,7 +89128,7 @@ return A.L($async$mW,r)},
 v5(a,b){return this.amI(a,b)},
 amI(a,b){var s=0,r=A.M(t.P),q,p=2,o,n=this,m,l,k,j,i,h,g,f
 var $async$v5=A.I(function(c,d){if(c===1){o=d
-s=p}while(true)switch(s){case 0:i=n.cz("BACKEND_BASE_URL","https://plantverse-ai.onrender.com")
+s=p}while(true)switch(s){case 0:i=n.cz("BACKEND_BASE_URL","https://dj2i5my9uyve1.cloudfront.net")
 h=A.aJ("/+$",!0,!1,!1)
 s=A.bp(i,h,"").length!==0?3:4
 break
@@ -89216,7 +89216,7 @@ break
 case 1:return A.K(q,r)
 case 2:return A.J(o,r)}})
 return A.L($async$u_,r)},
-NB(a){var s=this.cz("BACKEND_BASE_URL","https://plantverse-ai.onrender.com"),r=A.aJ("/+$",!0,!1,!1),q=A.cx(A.bp(s,r,"")+"/",0,null)
+NB(a){var s=this.cz("BACKEND_BASE_URL","https://dj2i5my9uyve1.cloudfront.net"),r=A.aJ("/+$",!0,!1,!1),q=A.cx(A.bp(s,r,"")+"/",0,null)
 return q.a2(B.c.br(a,"/")?B.c.bC(a,1):a)},
 a68(a){var s,r,q,p,o="message"
 try{q=t.P

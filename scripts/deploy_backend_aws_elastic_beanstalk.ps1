@@ -3,6 +3,7 @@ param(
   [string]$ApplicationName = 'plantverse-ai',
   [string]$EnvironmentName = 'plantverse-ai-prod',
   [string]$EnvFile = '',
+  [string]$PublicBaseUrl = '',
   [switch]$CreateCloudFront
 )
 
@@ -53,6 +54,20 @@ function Aws-Json {
   return $output | ConvertFrom-Json
 }
 
+function Write-JsonFile {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path,
+    [Parameter(Mandatory = $true)]
+    [object]$Value,
+    [int]$Depth = 8
+  )
+
+  $json = $Value | ConvertTo-Json -Depth $Depth
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($Path, $json, $utf8NoBom)
+}
+
 function Ensure-IamRole {
   param(
     [string]$RoleName,
@@ -94,23 +109,34 @@ function Ensure-IamRole {
 function Ensure-InstanceProfile {
   param([string]$RoleName)
 
+  $profile = $null
   try {
-    Aws-Json iam get-instance-profile `
+    $profile = Aws-Json iam get-instance-profile `
       --instance-profile-name $RoleName `
-      --region $Region | Out-Null
+      --region $Region
   } catch {
     Aws-Json iam create-instance-profile `
       --instance-profile-name $RoleName `
       --region $Region | Out-Null
+    Start-Sleep -Seconds 5
+    $profile = Aws-Json iam get-instance-profile `
+      --instance-profile-name $RoleName `
+      --region $Region
   }
 
-  try {
+  $hasRole = $false
+  foreach ($role in $profile.InstanceProfile.Roles) {
+    if ($role.RoleName -eq $RoleName) {
+      $hasRole = $true
+      break
+    }
+  }
+
+  if (-not $hasRole) {
     Aws-Json iam add-role-to-instance-profile `
       --instance-profile-name $RoleName `
       --role-name $RoleName `
       --region $Region | Out-Null
-  } catch {
-    # Already added.
   }
 }
 
@@ -132,7 +158,26 @@ function New-BackendBundle {
   Copy-Item -LiteralPath (Join-Path $backend 'public') -Destination (Join-Path $stage 'public') -Recurse -Force
   'web: npm start' | Set-Content -LiteralPath (Join-Path $stage 'Procfile') -Encoding ascii
 
-  Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zipPath -Force
+  Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $zip = [System.IO.Compression.ZipFile]::Open(
+    $zipPath,
+    [System.IO.Compression.ZipArchiveMode]::Create
+  )
+  try {
+    Get-ChildItem -LiteralPath $stage -Recurse -File | ForEach-Object {
+      $relative = $_.FullName.Substring($stage.Length).TrimStart('\', '/')
+      $entryName = $relative -replace '\\', '/'
+      [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+        $zip,
+        $_.FullName,
+        $entryName,
+        [System.IO.Compression.CompressionLevel]::Optimal
+      ) | Out-Null
+    }
+  } finally {
+    $zip.Dispose()
+  }
   return $zipPath
 }
 
@@ -233,6 +278,9 @@ if (-not $runtimeEnv.Contains('APP_VERSION_NAME')) {
 if (-not $runtimeEnv.Contains('APP_VERSION_CODE')) {
   $runtimeEnv['APP_VERSION_CODE'] = '3'
 }
+if ($PublicBaseUrl) {
+  $runtimeEnv['PUBLIC_BASE_URL'] = $PublicBaseUrl.TrimEnd('/')
+}
 
 $optionSettings = @(
   [ordered]@{
@@ -261,12 +309,11 @@ foreach ($entry in $runtimeEnv.GetEnumerator()) {
 }
 
 $optionSettingsPath = Join-Path $env:TEMP 'plantverse-eb-option-settings.json'
-$optionSettings | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $optionSettingsPath -Encoding UTF8
+Write-JsonFile -Path $optionSettingsPath -Value $optionSettings -Depth 8
 
 $existing = Aws-Json elasticbeanstalk describe-environments `
   --application-name $ApplicationName `
   --environment-names $EnvironmentName `
-  --include-deleted false `
   --region $Region
 
 if ($existing.Environments.Count -gt 0) {
@@ -311,7 +358,7 @@ Write-Host $ebUrl
 if ($CreateCloudFront) {
   $callerReference = "plantverse-$versionLabel"
   $distributionConfigPath = Join-Path $env:TEMP 'plantverse-cloudfront-config.json'
-  [ordered]@{
+  $distributionConfig = [ordered]@{
     CallerReference = $callerReference
     Comment = "PlantVerse AI $EnvironmentName"
     Enabled = $true
@@ -358,7 +405,8 @@ if ($CreateCloudFront) {
     ViewerCertificate = [ordered]@{
       CloudFrontDefaultCertificate = $true
     }
-  } | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $distributionConfigPath -Encoding UTF8
+  }
+  Write-JsonFile -Path $distributionConfigPath -Value $distributionConfig -Depth 20
 
   Write-Host 'Creating CloudFront HTTPS distribution...'
   $distribution = Aws-Json cloudfront create-distribution `
@@ -370,8 +418,14 @@ if ($CreateCloudFront) {
   Write-Host $cloudFrontUrl
   Write-Host ''
   Write-Host 'CloudFront can take 5-20 minutes to finish deploying.'
+  Write-Host "Future deploys can reuse this HTTPS base URL with:"
+  Write-Host ".\scripts\deploy_backend_aws_elastic_beanstalk.ps1 -Region $Region -PublicBaseUrl `"$cloudFrontUrl`""
+  Write-Host ''
   Write-Host "Build APK with: .\scripts\build_backend_apk.ps1 -BackendBaseUrl `"$cloudFrontUrl`""
 } else {
   Write-Host ''
   Write-Host 'For mobile browser camera and APK backend HTTPS, run again with -CreateCloudFront.'
+  if ($PublicBaseUrl) {
+    Write-Host "Public HTTPS base URL configured: $PublicBaseUrl"
+  }
 }
