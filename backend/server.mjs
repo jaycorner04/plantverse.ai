@@ -54,8 +54,8 @@ biology: {photosynthesis_type, transpiration_details, root_oxygen_exchange,
 growth_respiration_details}.
 
 estimated_hourly_release and estimated_daily_release must include realistic
-approximate ranges in mL, for example "2-6 mL oxygen/hour" and
-"24-72 mL oxygen/day assuming about 12 productive light hours". Clearly state
+approximate ranges in liters, for example "0.002-0.006 L oxygen/hour" and
+"0.024-0.072 L oxygen/day assuming about 12 productive light hours". Clearly state
 that values vary with leaf area, light intensity, humidity, and plant maturity.
 oxygen_output must summarize both the hourly and daily oxygen estimates in one
 plain-language sentence.
@@ -577,9 +577,9 @@ async function identifyWithPlantIdV2({ imageBase64 }) {
 
 function identityProfile({ provider, sourceUrl, commonName, scientificName, family, confidence }) {
   const hourlyOxygen =
-    'Approx. 2-8 mL oxygen/hour for a small healthy indoor plant in bright light.';
+    'Approx. 0.002-0.008 L oxygen/hour for a small healthy indoor plant in bright light.';
   const dailyOxygen =
-    'Approx. 24-96 mL oxygen/day, assuming about 12 productive light hours.';
+    'Approx. 0.024-0.096 L oxygen/day, assuming about 12 productive light hours.';
   return {
     common_name: commonName,
     scientific_name: scientificName,

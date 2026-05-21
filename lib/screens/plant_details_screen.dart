@@ -94,10 +94,10 @@ class PlantDetailsScreen extends ConsumerWidget {
     return '${(_confidence * 100).toStringAsFixed(0)}% AI confidence';
   }
 
-  String get _oxygenOutput => _value(
+  String get _oxygenOutput => PlantOxygenMetrics.toLiters(_value(
         'oxygen_output',
         'Small but steady oxygen contribution while leaves receive enough light; exact output varies with plant size and health.',
-      );
+      ));
   PlantOxygenMetrics get _oxygenMetrics =>
       PlantOxygenMetrics.fromResult(result);
 
@@ -668,58 +668,6 @@ class PlantDetailsScreen extends ConsumerWidget {
           ],
         );
       },
-    );
-  }
-
-  Widget _compactOxygenDetail(
-    IconData icon,
-    String label,
-    String value,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: AppColors.pureWhite.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: AppColors.pureWhite.withOpacity(0.08)),
-                ),
-                child: Icon(icon, color: AppColors.actionBlueOnDark, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: AppColors.pureWhite.withOpacity(0.58),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.pureWhite,
-              fontSize: 15,
-              height: 1.42,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

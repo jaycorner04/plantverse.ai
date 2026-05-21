@@ -55,7 +55,7 @@ class OfflinePlantCatalog {
       'humidity_score': humidityScore,
       'photosynthesis_score': photosynthesisScore,
       'oxygen_output':
-          '${plant.commonName} may release a small amount of oxygen during daylight photosynthesis. Estimate: ${plant.oxygenEstimate}; ${_dailyOxygenEstimate(plant.oxygenEstimate)}, changing with leaf area, light, water, and maturity.',
+          '${plant.commonName} may release a small amount of oxygen during daylight photosynthesis. Estimate: ${_toLiters(plant.oxygenEstimate)}; ${_dailyOxygenEstimate(plant.oxygenEstimate)}, changing with leaf area, light, water, and maturity.',
       'air_intake': 'Carbon dioxide, light energy, and water.',
       'air_release': 'Oxygen and water vapor during active photosynthesis.',
       'health_summary':
@@ -135,7 +135,7 @@ class OfflinePlantCatalog {
       'environmental_intelligence': {
         'oxygen': {
           'score': photosynthesisScore,
-          'estimated_hourly_release': plant.oxygenEstimate,
+          'estimated_hourly_release': _toLiters(plant.oxygenEstimate),
           'estimated_daily_release': _dailyOxygenEstimate(plant.oxygenEstimate),
           'day_vs_night':
               'Oxygen release happens mainly in daylight. At night the plant still respires and consumes a tiny amount of oxygen.',
@@ -167,33 +167,67 @@ class OfflinePlantCatalog {
 
   static String _dailyOxygenEstimate(String hourlyEstimate) {
     final range = RegExp(
-      r'(\d+(?:\.\d+)?)\s*(?:-|to)\s*(\d+(?:\.\d+)?)\s*mL',
+      '(\\d+(?:\\.\\d+)?)\\s*(?:-|\\u2013|\\u2014|to)\\s*(\\d+(?:\\.\\d+)?)\\s*(mL|L)\\b',
       caseSensitive: false,
     ).firstMatch(hourlyEstimate);
     if (range != null) {
       final low = double.tryParse(range.group(1) ?? '');
       final high = double.tryParse(range.group(2) ?? '');
+      final unit = (range.group(3) ?? '').toLowerCase();
       if (low != null && high != null) {
-        return 'about ${_formatMl(low * 12)}-${_formatMl(high * 12)} mL oxygen/day assuming 12 productive light hours';
+        final lowLiters = unit == 'ml' ? low / 1000 : low;
+        final highLiters = unit == 'ml' ? high / 1000 : high;
+        return 'about ${_formatLiters(lowLiters * 12)}-${_formatLiters(highLiters * 12)} L oxygen/day assuming 12 productive light hours';
       }
     }
 
     final single = RegExp(
-      r'(\d+(?:\.\d+)?)\s*mL',
+      r'(\d+(?:\.\d+)?)\s*(mL|L)\b',
       caseSensitive: false,
     ).firstMatch(hourlyEstimate);
     final value = double.tryParse(single?.group(1) ?? '');
+    final unit = (single?.group(2) ?? '').toLowerCase();
     if (value != null) {
-      return 'about ${_formatMl(value * 12)} mL oxygen/day assuming 12 productive light hours';
+      final liters = unit == 'ml' ? value / 1000 : value;
+      return 'about ${_formatLiters(liters * 12)} L oxygen/day assuming 12 productive light hours';
     }
 
     return 'daily oxygen output varies with leaf area, light intensity, and active growth';
   }
 
-  static String _formatMl(double value) {
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)} L';
-    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
-    return value.toStringAsFixed(1);
+  static String _toLiters(String value) {
+    var converted = value.replaceAllMapped(
+      RegExp(
+        '(\\d+(?:\\.\\d+)?)\\s*(?:-|\\u2013|\\u2014|to)\\s*(\\d+(?:\\.\\d+)?)\\s*mL\\b',
+        caseSensitive: false,
+      ),
+      (match) {
+        final low = double.tryParse(match.group(1) ?? '');
+        final high = double.tryParse(match.group(2) ?? '');
+        if (low == null || high == null) return match.group(0) ?? '';
+        return '${_formatLiters(low / 1000)}-${_formatLiters(high / 1000)} L';
+      },
+    );
+    converted = converted.replaceAllMapped(
+      RegExp(r'(\d+(?:\.\d+)?)\s*mL\b', caseSensitive: false),
+      (match) {
+        final amount = double.tryParse(match.group(1) ?? '');
+        if (amount == null) return match.group(0) ?? '';
+        return '${_formatLiters(amount / 1000)} L';
+      },
+    );
+    return converted;
+  }
+
+  static String _formatLiters(double value) {
+    final decimals = value < 0.1
+        ? 3
+        : value < 1
+            ? 2
+            : 1;
+    var text = value.toStringAsFixed(decimals);
+    text = text.replaceFirst(RegExp(r'\.?0+$'), '');
+    return text == '0' ? '0.001' : text;
   }
 
   static final List<_OfflinePlant> _plants = [
@@ -256,7 +290,8 @@ class OfflinePlantCatalog {
       maximumTemperature: 'Avoid sustained heat above 35 C.',
       winterSurvival: 'Does not tolerate frost; keep indoors in winter.',
       photosynthesisScore: 0.62,
-      oxygenEstimate: 'roughly 3-8 mL oxygen/hour in bright indoor light',
+      oxygenEstimate:
+          'roughly 0.003-0.008 L oxygen/hour in bright indoor light',
       airPurificationScore: 0.62,
       indoorAirContribution:
           'Small but steady contribution in a planted room; not a replacement for ventilation.',
@@ -332,7 +367,8 @@ class OfflinePlantCatalog {
       maximumTemperature: 'Avoid prolonged heat above 35 C.',
       winterSurvival: 'Indoor only where winters are cold.',
       photosynthesisScore: 0.68,
-      oxygenEstimate: 'roughly 4-12 mL oxygen/hour depending on vine size',
+      oxygenEstimate:
+          'roughly 0.004-0.012 L oxygen/hour depending on vine size',
       airPurificationScore: 0.66,
       indoorAirContribution:
           'Useful as part of a group of leafy indoor plants.',
@@ -404,7 +440,8 @@ class OfflinePlantCatalog {
       maximumTemperature: 'Avoid sustained heat above 34 C.',
       winterSurvival: 'Protect from cold and reduce watering.',
       photosynthesisScore: 0.76,
-      oxygenEstimate: 'roughly 8-20 mL oxygen/hour for a mature leafy plant',
+      oxygenEstimate:
+          'roughly 0.008-0.020 L oxygen/hour for a mature leafy plant',
       airPurificationScore: 0.70,
       indoorAirContribution:
           'Large leaves give a stronger local transpiration and gas exchange presence.',
@@ -473,7 +510,8 @@ class OfflinePlantCatalog {
       maximumTemperature: 'Avoid heat above 32 C.',
       winterSurvival: 'Indoor protection required in cold climates.',
       photosynthesisScore: 0.63,
-      oxygenEstimate: 'roughly 4-10 mL oxygen/hour in bright indirect light',
+      oxygenEstimate:
+          'roughly 0.004-0.010 L oxygen/hour in bright indirect light',
       airPurificationScore: 0.72,
       indoorAirContribution:
           'Good leafy surface for a small room plant cluster.',
@@ -571,7 +609,7 @@ class OfflinePlantCatalog {
           'Indoor protection required in winter; reduce watering in low light.',
       photosynthesisScore: 0.72,
       oxygenEstimate:
-          'roughly 6-16 mL oxygen/hour for a healthy indoor specimen in bright light',
+          'roughly 0.006-0.016 L oxygen/hour for a healthy indoor specimen in bright light',
       airPurificationScore: 0.64,
       indoorAirContribution:
           'Broad glossy leaves add modest gas exchange and transpiration to a room.',
@@ -645,7 +683,7 @@ class OfflinePlantCatalog {
       maximumTemperature: 'Avoid extreme heat above 38 C indoors.',
       winterSurvival: 'Protect from frost and water sparingly.',
       photosynthesisScore: 0.66,
-      oxygenEstimate: 'roughly 2-7 mL oxygen/hour depending on light',
+      oxygenEstimate: 'roughly 0.002-0.007 L oxygen/hour depending on light',
       airPurificationScore: 0.50,
       indoorAirContribution:
           'Small contribution; strongest value is drought-tolerant greenery.',
@@ -753,7 +791,7 @@ class OfflinePlantCatalog {
           'Not frost-safe in pots; keep drier and warmer during winter dormancy.',
       photosynthesisScore: 0.64,
       oxygenEstimate:
-          'roughly 2-6 mL oxygen/hour for a small bright-window specimen',
+          'roughly 0.002-0.006 L oxygen/hour for a small bright-window specimen',
       airPurificationScore: 0.42,
       indoorAirContribution:
           'Small gas-exchange contribution; useful as living greenery, not a replacement for ventilation.',
@@ -825,7 +863,7 @@ class OfflinePlantCatalog {
       maximumTemperature: 'Avoid sustained heat above 32 C.',
       winterSurvival: 'Protect from frost.',
       photosynthesisScore: 0.64,
-      oxygenEstimate: 'roughly 4-10 mL oxygen/hour in good indoor light',
+      oxygenEstimate: 'roughly 0.004-0.010 L oxygen/hour in good indoor light',
       airPurificationScore: 0.68,
       indoorAirContribution: 'Good contribution for a small leafy plant.',
       nasaRelevance:
