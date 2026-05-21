@@ -65,10 +65,23 @@ berries. Coral Beads is not a pine-like succulent.
   String get _groqApiKey => _envValue('GROQ_API_KEY', _definedGroqKey);
   String get _openRouterApiKey =>
       _envValue('OPENROUTER_API_KEY', _definedOpenRouterKey);
-  String get _backendBaseUrl => _envValue(
-        'BACKEND_BASE_URL',
-        _definedBackendBaseUrl,
-      ).replaceAll(RegExp(r'/+$'), '');
+  String get _backendBaseUrl {
+    final configured = _envValue(
+      'BACKEND_BASE_URL',
+      _definedBackendBaseUrl,
+    ).replaceAll(RegExp(r'/+$'), '');
+    if (configured.isNotEmpty) return configured;
+    return _sameOriginBackendBaseUrl();
+  }
+
+  String _sameOriginBackendBaseUrl() {
+    final base = Uri.base;
+    if (base.scheme != 'http' && base.scheme != 'https') return '';
+    if (base.host.isEmpty) return '';
+    final port = base.hasPort ? ':${base.port}' : '';
+    return '${base.scheme}://${base.host}$port';
+  }
+
   String get _groqVisionModel {
     final model = _envValue('GROQ_VISION_MODEL', _definedGroqModel);
     return model.isNotEmpty
