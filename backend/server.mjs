@@ -1051,8 +1051,8 @@ function sendJson(res, status, data) {
 
 function appVersionPayload(req) {
   const baseUrl = publicBaseUrl(req);
-  const latestVersionCode = Number.parseInt(env.APP_VERSION_CODE || '3', 10);
-  const latestVersionName = cleanText(env.APP_VERSION_NAME) || '1.0.2';
+  const latestVersionCode = Number.parseInt(env.APP_VERSION_CODE || '4', 10);
+  const latestVersionName = cleanText(env.APP_VERSION_NAME) || '1.0.3';
   const apkUrl =
     cleanText(env.APK_URL) ||
     `${baseUrl}/downloads/PlantVerse-AI-release.apk`;
@@ -1070,6 +1070,7 @@ function appVersionPayload(req) {
     apk_url: apkUrl,
     force_update: env.FORCE_APP_UPDATE === 'true',
     release_notes: [
+      'Fixes mobile web scan recovery so gallery/camera does not show getLostData errors.',
       'Adds identity confidence guard with possible plant matches.',
       'Avoids confident species facts when scan confidence is weak.',
       'Improved pine succulent identification.',

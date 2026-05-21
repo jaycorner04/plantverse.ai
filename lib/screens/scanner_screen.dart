@@ -51,23 +51,50 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   Future<void> _pickAndScan(ImageSource source) async {
     if (_isScanning) return;
 
-    XFile? image;
+    final image = await _pickImageSafely(source);
+    if (image == null) return;
+    await _scanPickedImage(image);
+  }
+
+  Future<XFile?> _pickImageSafely(ImageSource source) async {
     try {
-      image = await _imagePicker.pickImage(
+      return await _imagePicker.pickImage(
         source: source,
         imageQuality: 68,
         maxWidth: 1024,
       );
     } on PlatformException catch (error) {
+      if (_shouldUseFileFallback(source)) {
+        return _pickGalleryAfterCameraFailure();
+      }
       _showPickerError(error.message ?? error.code);
-      return;
     } catch (error) {
+      if (_shouldUseFileFallback(source)) {
+        return _pickGalleryAfterCameraFailure();
+      }
       _showPickerError(error.toString());
-      return;
     }
 
-    if (image == null) return;
-    await _scanPickedImage(image);
+    return null;
+  }
+
+  Future<XFile?> _pickGalleryAfterCameraFailure() async {
+    try {
+      return await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 68,
+        maxWidth: 1024,
+      );
+    } on PlatformException catch (error) {
+      _showPickerError(error.message ?? error.code);
+    } catch (error) {
+      _showPickerError(error.toString());
+    }
+    return null;
+  }
+
+  bool _shouldUseFileFallback(ImageSource source) {
+    return kIsWeb && source == ImageSource.camera;
   }
 
   Future<void> _recoverLostImage() async {
@@ -82,7 +109,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       if (image == null) {
         final exception = response.exception;
         if (exception != null) {
-          _showPickerError(exception.message ?? exception.code);
+          final message = exception.message ?? exception.code;
+          if (!_isLostDataImplementationError(message)) {
+            _showPickerError(message);
+          }
         }
         return;
       }
@@ -90,12 +120,27 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       await _scanPickedImage(image);
     } catch (error) {
       if (!mounted) return;
+      if (_isLostDataImplementationError(error.toString())) return;
       _showPickerError(error.toString());
     }
   }
 
   Future<void> _scanPickedImage(XFile image) async {
-    final bytes = await image.readAsBytes();
+    Uint8List bytes;
+    try {
+      bytes = await image.readAsBytes();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Could not read the selected image. Please choose another clear plant photo.';
+        _status = null;
+        _isScanning = false;
+      });
+      return;
+    }
+
+    final fileName = image.name.trim().isEmpty ? 'plant-scan.jpg' : image.name;
     setState(() {
       _selectedBytes = bytes;
       _isScanning = true;
@@ -110,7 +155,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     try {
       final result = await ref.read(aiServiceProvider).identifyPlant(
             imageBytes: bytes,
-            fileName: image.name,
+            fileName: fileName,
           );
       if (!mounted) return;
       ref.read(scanResultProvider.notifier).state = ScanResult(
@@ -164,12 +209,34 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   void _showPickerError(String message) {
     if (!mounted) return;
+    final cleanMessage = _cleanPickerMessage(message);
+    final details = cleanMessage.isEmpty ? '' : ' $cleanMessage';
+    _scanStatusTimer?.cancel();
     setState(() {
       _errorMessage =
-          'Could not open camera/gallery. Check app permissions and try again. $message';
+          'Could not open camera/gallery. Check app permissions and try again.$details';
       _status = null;
       _isScanning = false;
     });
+  }
+
+  String _cleanPickerMessage(String message) {
+    if (_isLostDataImplementationError(message)) return '';
+    if (message.toLowerCase().contains('permission')) {
+      return 'Allow camera or photo access in your browser/app settings.';
+    }
+    if (message.trim().isEmpty) return '';
+    return message
+        .replaceAll('PlatformException(', '')
+        .replaceAll('UnimplementedError:', '')
+        .trim();
+  }
+
+  bool _isLostDataImplementationError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('getlostdata') ||
+        lower.contains('retrievelostdata') ||
+        lower.contains('has not been implemented');
   }
 
   @override

@@ -2,9 +2,9 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$BackendBaseUrl,
 
-  [string]$AppVersionName = '1.0.2',
+  [string]$AppVersionName = '1.0.3',
 
-  [int]$AppVersionCode = 3
+  [int]$AppVersionCode = 4
 )
 
 Set-StrictMode -Version Latest
@@ -19,6 +19,8 @@ try {
   }
 
   & $flutter build apk --release --no-pub `
+    "--build-name=$AppVersionName" `
+    "--build-number=$AppVersionCode" `
     "--dart-define=BACKEND_BASE_URL=$BackendBaseUrl" `
     "--dart-define=APP_VERSION_NAME=$AppVersionName" `
     "--dart-define=APP_VERSION_CODE=$AppVersionCode"
