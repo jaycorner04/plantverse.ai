@@ -38,6 +38,8 @@ class AiService {
       String.fromEnvironment('OPENROUTER_API_KEY');
   static const _definedBackendBaseUrl =
       String.fromEnvironment('BACKEND_BASE_URL');
+  static const _defaultPublicBackendBaseUrl =
+      'https://plantverse-ai.onrender.com';
   static const _knownVisualConfusionGuidance = '''
 
 Known visual confusion rule:
@@ -71,7 +73,8 @@ berries. Coral Beads is not a pine-like succulent.
       _definedBackendBaseUrl,
     ).replaceAll(RegExp(r'/+$'), '');
     if (configured.isNotEmpty) return configured;
-    return _sameOriginBackendBaseUrl();
+    final sameOrigin = _sameOriginBackendBaseUrl();
+    return sameOrigin.isNotEmpty ? sameOrigin : _defaultPublicBackendBaseUrl;
   }
 
   String _sameOriginBackendBaseUrl() {

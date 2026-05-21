@@ -32,6 +32,8 @@ class AppUpdateService {
   static const _channel = MethodChannel('plantverse.ai/updater');
   static const _definedBackendBaseUrl =
       String.fromEnvironment('BACKEND_BASE_URL');
+  static const _defaultPublicBackendBaseUrl =
+      'https://plantverse-ai.onrender.com';
   static const _currentVersionCode =
       int.fromEnvironment('APP_VERSION_CODE', defaultValue: 1);
   static const _currentVersionName =
@@ -44,10 +46,13 @@ class AppUpdateService {
     return runtimeValue.isNotEmpty ? runtimeValue : definedValue.trim();
   }
 
-  String get _backendBaseUrl => _envValue(
-        'BACKEND_BASE_URL',
-        _definedBackendBaseUrl,
-      ).replaceAll(RegExp(r'/+$'), '');
+  String get _backendBaseUrl {
+    final configured = _envValue(
+      'BACKEND_BASE_URL',
+      _definedBackendBaseUrl,
+    ).replaceAll(RegExp(r'/+$'), '');
+    return configured.isNotEmpty ? configured : _defaultPublicBackendBaseUrl;
+  }
 
   int get currentVersionCode => _currentVersionCode;
   String get currentVersionName => _currentVersionName;

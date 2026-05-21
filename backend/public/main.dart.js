@@ -92407,9 +92407,10 @@ r=(r.a?r.gYY():B.cQ).h(0,a)
 s=r==null?null:B.c.bQ(r)
 if(s==null)s=""
 return s.length!==0?s:B.c.bQ(b)},
-goo(){var s=this.dB("BACKEND_BASE_URL",""),r=A.aQ("/+$",!0,!1,!1),q=A.bN(s,r,"")
-if(q.length!==0)return q
-return this.al9()},
+goo(){var s,r=this.dB("BACKEND_BASE_URL",""),q=A.aQ("/+$",!0,!1,!1),p=A.bN(r,q,"")
+if(p.length!==0)return p
+s=this.al9()
+return s.length!==0?s:"https://plantverse-ai.onrender.com"},
 al9(){var s,r=A.Sh()
 if(r.gdZ()!=="http"&&r.gdZ()!=="https")return""
 if(r.gm7().length===0)return""
