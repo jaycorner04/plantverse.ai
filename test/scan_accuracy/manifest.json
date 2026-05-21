@@ -1,0 +1,37 @@
+[
+  {
+    "id": "pine-succulent",
+    "image": "test/scan_accuracy/images/pine-succulent.jpg",
+    "expected_any": ["crassula tetragona", "miniature pine", "pine succulent"],
+    "min_confidence": 0.4,
+    "disallow_unconfirmed": false
+  },
+  {
+    "id": "snake-plant",
+    "image": "test/scan_accuracy/images/snake-plant.jpg",
+    "expected_any": ["dracaena trifasciata", "snake plant", "sansevieria"],
+    "min_confidence": 0.5,
+    "disallow_unconfirmed": true
+  },
+  {
+    "id": "aloe-vera",
+    "image": "test/scan_accuracy/images/aloe-vera.jpg",
+    "expected_any": ["aloe vera", "aloe barbadensis"],
+    "min_confidence": 0.5,
+    "disallow_unconfirmed": true
+  },
+  {
+    "id": "rubber-plant",
+    "image": "test/scan_accuracy/images/rubber-plant.jpg",
+    "expected_any": ["ficus elastica", "rubber plant"],
+    "min_confidence": 0.5,
+    "disallow_unconfirmed": true
+  },
+  {
+    "id": "pothos",
+    "image": "test/scan_accuracy/images/pothos.jpg",
+    "expected_any": ["epipremnum aureum", "pothos", "money plant"],
+    "min_confidence": 0.5,
+    "disallow_unconfirmed": true
+  }
+]

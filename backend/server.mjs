@@ -19,10 +19,14 @@ sunlight_requirement, sunlight_score, temperature_range, humidity_level,
 humidity_score, photosynthesis_score, oxygen_output, air_intake, air_release,
 health_summary, story_markdown,
 human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
-environmental_intelligence.
+environmental_intelligence, candidate_matches.
 
 Use confidence, toxicity_score, water_score, sunlight_score, humidity_score,
 and photosynthesis_score from 0 to 1.
+candidate_matches must be an array of 2-4 possible visual matches. Each item
+must include common_name, scientific_name, confidence, and reason. Include the
+best match first. If confidence is below 0.58, keep the language cautious and
+explain what visible details are missing.
 
 human_toxicity must be an object with:
 level, severity_score, touch_effects, ingestion_effects, skin_irritation,
@@ -128,7 +132,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/identify-plant') {
       const body = await readJson(req);
       const input = parseImageInput(body);
-      const result = await identifyPlant(input);
+      const result = normalizeIdentityResult(await identifyPlant(input));
       sendJson(res, 200, result);
       return;
     }
@@ -475,6 +479,7 @@ async function identifyWithPlantNet({ imageBase64, fileName }) {
     scientificName,
     family: cleanText(species.family?.scientificName) || 'Plant family not listed',
     confidence: clamp01(top.score),
+    candidateMatches: plantNetCandidates(data.results),
   });
   return maybeEnrichWithPerenual(profile, scientificName);
 }
@@ -528,6 +533,7 @@ async function identifyWithPlantIdV3({ imageBase64 }) {
     scientificName,
     family: 'Plant family not listed',
     confidence: clamp01(top.probability),
+    candidateMatches: plantIdV3Candidates(data?.result?.classification?.suggestions),
   });
   return maybeEnrichWithPerenual(profile, scientificName);
 }
@@ -571,11 +577,77 @@ async function identifyWithPlantIdV2({ imageBase64 }) {
     scientificName,
     family: cleanText(details.taxonomy?.family) || 'Plant family not listed',
     confidence: clamp01(top.probability),
+    candidateMatches: plantIdV2Candidates(data.suggestions),
   });
   return maybeEnrichWithPerenual(profile, scientificName);
 }
 
-function identityProfile({ provider, sourceUrl, commonName, scientificName, family, confidence }) {
+function plantNetCandidates(results) {
+  if (!Array.isArray(results)) return [];
+  return results
+    .slice(0, 4)
+    .map((item) => {
+      const species = item?.species || {};
+      const commonNames = Array.isArray(species.commonNames)
+        ? species.commonNames.map((name) => cleanText(name)).filter(Boolean)
+        : [];
+      const scientificName = cleanText(
+        species.scientificNameWithoutAuthor || species.scientificName,
+      );
+      return {
+        common_name: commonNames[0] || scientificName,
+        scientific_name: scientificName,
+        confidence: clamp01(item?.score),
+        reason: 'Pl@ntNet visual candidate',
+      };
+    })
+    .filter((item) => item.common_name || item.scientific_name);
+}
+
+function plantIdV3Candidates(suggestions) {
+  if (!Array.isArray(suggestions)) return [];
+  return suggestions
+    .slice(0, 4)
+    .map((item) => {
+      const scientificName = cleanText(item?.name);
+      return {
+        common_name: scientificName,
+        scientific_name: scientificName,
+        confidence: clamp01(item?.probability),
+        reason: 'Plant.id visual candidate',
+      };
+    })
+    .filter((item) => item.scientific_name);
+}
+
+function plantIdV2Candidates(suggestions) {
+  if (!Array.isArray(suggestions)) return [];
+  return suggestions
+    .slice(0, 4)
+    .map((item) => {
+      const scientificName = cleanText(item?.plant_name);
+      const commonNames = Array.isArray(item?.plant_details?.common_names)
+        ? item.plant_details.common_names.map((name) => cleanText(name)).filter(Boolean)
+        : [];
+      return {
+        common_name: commonNames[0] || scientificName,
+        scientific_name: scientificName,
+        confidence: clamp01(item?.probability),
+        reason: 'Plant.id visual candidate',
+      };
+    })
+    .filter((item) => item.common_name || item.scientific_name);
+}
+
+function identityProfile({
+  provider,
+  sourceUrl,
+  commonName,
+  scientificName,
+  family,
+  confidence,
+  candidateMatches = [],
+}) {
   const hourlyOxygen =
     'Approx. 0.002-0.008 L oxygen/hour for a small healthy indoor plant in bright light.';
   const dailyOxygen =
@@ -586,6 +658,7 @@ function identityProfile({ provider, sourceUrl, commonName, scientificName, fami
     family,
     confidence,
     recognition_mode: 'backend_external_api',
+    candidate_matches: candidateMatches,
     reference_sources: [`${provider} plant identification result: ${sourceUrl}`],
     description:
       `Identified from the uploaded image by ${provider}. Care and toxicity stay conservative unless enriched by a source-backed care database.`,
@@ -705,6 +778,210 @@ function parseImageInput(body) {
   return { imageBase64, fileName };
 }
 
+function normalizeIdentityResult(profile) {
+  const result = { ...profile };
+  const mode = cleanText(result.recognition_mode).toLowerCase();
+  const originalCommon = cleanText(result.common_name);
+  const originalScientific = cleanText(result.scientific_name);
+  const originalFamily = cleanText(result.family);
+  const confidence = scoreValue(result.confidence, defaultConfidence(mode));
+  const candidates = normalizedCandidates(
+    result,
+    originalCommon,
+    originalScientific,
+    confidence,
+  );
+  const status = identityStatus({
+    confidence,
+    mode,
+    unknownName: isUnknownIdentity(originalCommon, originalScientific),
+    candidates,
+  });
+
+  result.confidence = confidence;
+  result.candidate_matches = candidates;
+  result.identity_status = status;
+  result.identity_status_label = identityLabel(status, confidence);
+  result.identity_warning = identityWarning(status, candidates);
+  result.identity_confidence_reason = identityReason(status, mode, confidence);
+  result.requires_identity_confirmation =
+    status === 'needs_confirmation' || status === 'unconfirmed';
+
+  if (status === 'unconfirmed' && mode !== 'offline_general') {
+    return {
+      ...result,
+      original_common_name: originalCommon,
+      original_scientific_name: originalScientific,
+      original_family: originalFamily,
+      ...unconfirmedOverlay(candidates),
+    };
+  }
+
+  return result;
+}
+
+function normalizedCandidates(profile, commonName, scientificName, confidence) {
+  const raw =
+    profile.candidate_matches ||
+    profile.possible_matches ||
+    profile.alternatives ||
+    profile.similar_species;
+  const candidates = [];
+
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const candidate = candidateFrom(item);
+      if (candidate) candidates.push(candidate);
+    }
+  }
+
+  if (!isUnknownIdentity(commonName, scientificName)) {
+    candidates.unshift({
+      common_name: commonName || scientificName,
+      scientific_name: scientificName,
+      confidence,
+      reason: 'Top scan interpretation',
+    });
+  }
+
+  const seen = new Set();
+  return candidates
+    .filter((item) => {
+      const common = cleanText(item.common_name);
+      const scientific = cleanText(item.scientific_name);
+      const key = `${common.toLowerCase()}|${scientific.toLowerCase()}`;
+      if (key === '|' || seen.has(key)) return false;
+      seen.add(key);
+      item.common_name = common;
+      item.scientific_name = scientific;
+      item.confidence = scoreValue(item.confidence, 0);
+      item.reason = cleanText(item.reason) || 'Visual similarity';
+      return true;
+    })
+    .sort((left, right) => right.confidence - left.confidence)
+    .slice(0, 4);
+}
+
+function candidateFrom(value) {
+  if (value && typeof value === 'object') {
+    const common = cleanText(value.common_name || value.commonName || value.name);
+    const scientific = cleanText(
+      value.scientific_name || value.scientificName || value.canonicalName,
+    );
+    if (isUnknownIdentity(common, scientific)) return null;
+    return {
+      common_name: common || scientific,
+      scientific_name: scientific,
+      confidence: scoreValue(value.confidence || value.score, 0),
+      reason: cleanText(value.reason) || 'Visual similarity',
+    };
+  }
+
+  const text = cleanText(value);
+  if (!text) return null;
+  return {
+    common_name: text,
+    scientific_name: '',
+    confidence: 0,
+    reason: 'Possible visual alternative',
+  };
+}
+
+function identityStatus({ confidence, mode, unknownName, candidates }) {
+  if (mode === 'offline_general' || unknownName) return 'unconfirmed';
+  if (mode === 'offline_taxonomy') return 'needs_confirmation';
+  if (mode === 'offline_catalog') {
+    return confidence >= 0.62 ? 'likely' : 'needs_confirmation';
+  }
+  if (confidence >= 0.78) return 'confirmed';
+  if (confidence >= 0.58) return 'likely';
+  const topCandidateConfidence = candidates.length
+    ? scoreValue(candidates[0].confidence, 0)
+    : 0;
+  if (confidence >= 0.40 || topCandidateConfidence >= 0.40) {
+    return 'needs_confirmation';
+  }
+  return 'unconfirmed';
+}
+
+function unconfirmedOverlay(candidates) {
+  const possible = candidates.length
+    ? ` Possible match: ${cleanText(candidates[0].common_name)}.`
+    : '';
+  return {
+    common_name: 'Unconfirmed plant',
+    scientific_name: 'Species not confirmed',
+    family: 'Family not confirmed',
+    description:
+      `The scan looks plant-like, but confidence is too low to attach species-specific facts safely.${possible} Retake with clear leaves, stems, and full plant shape.`,
+    care_difficulty: 'Moderate until identified',
+    native_region: 'Unknown until identity is confirmed',
+    toxicity_level: 'Unknown - keep away from pets and children',
+    toxicity_score: 0.45,
+    water_requirement: 'Check soil moisture before watering',
+    water_score: 0.52,
+    sunlight_requirement: 'Bright indirect light is safest until confirmed',
+    sunlight_score: 0.62,
+    temperature_range: '18-30 C',
+    humidity_level: 'Average indoor humidity',
+    humidity_score: 0.50,
+    photosynthesis_score: 0.54,
+    health_summary:
+      'PlantVerse is not confident enough to name this plant. To avoid wrong care or toxicity facts, it is showing conservative guidance and possible matches instead of pretending certainty.',
+    story_markdown:
+      'This scan needs a clearer identity before PlantVerse can give species-specific care. Use a bright photo with several leaves, the stem structure, and the full plant silhouette.',
+  };
+}
+
+function identityLabel(status, confidence) {
+  if (status === 'confirmed') return `${Math.round(confidence * 100)}% confirmed`;
+  if (status === 'likely') return `${Math.round(confidence * 100)}% likely match`;
+  if (status === 'needs_confirmation') return 'Needs confirmation';
+  return 'Unconfirmed plant';
+}
+
+function identityWarning(status, candidates) {
+  if (status === 'confirmed') return 'Strong identity signal from the scan.';
+  if (status === 'likely') {
+    return 'Likely match. Confirm leaf shape, stem structure, and growth habit before high-risk care or toxicity decisions.';
+  }
+  if (status === 'needs_confirmation') {
+    return 'The scan has a possible match, but PlantVerse is keeping the identity cautious. Compare the alternatives before trusting species-specific details.';
+  }
+  if (candidates.length === 0) {
+    return 'Identity is too weak. Retake with clearer leaves, stems, and full plant shape.';
+  }
+  return 'Identity is too weak. Possible matches are shown only as leads, not confirmed facts.';
+}
+
+function identityReason(status, mode, confidence) {
+  if (mode === 'offline_taxonomy') {
+    return 'Matched by name/taxonomy signal only, not direct visual proof.';
+  }
+  if (mode === 'offline_general') {
+    return 'No reliable catalog or cloud identity was available.';
+  }
+  return `Identity guard status: ${status} from ${Math.round(confidence * 100)}% confidence using ${mode}.`;
+}
+
+function isUnknownIdentity(commonName, scientificName) {
+  const joined = `${commonName} ${scientificName}`.toLowerCase().trim();
+  return (
+    !joined ||
+    joined.includes('unknown') ||
+    joined.includes('unconfirmed') ||
+    joined.includes('not confirmed') ||
+    joined.includes('species pending')
+  );
+}
+
+function defaultConfidence(mode) {
+  if (mode === 'offline_general') return 0.28;
+  if (mode === 'offline_taxonomy') return 0.46;
+  if (mode === 'offline_catalog') return 0.68;
+  return 0.50;
+}
+
 function withFallbackReason(profile, fallbackReason) {
   const reason = cleanText(fallbackReason);
   return reason ? { ...profile, fallback_reason: reason } : profile;
@@ -718,6 +995,16 @@ function clamp01(value) {
   return typeof value === 'number' && Number.isFinite(value)
     ? Math.max(0, Math.min(1, value))
     : 0.5;
+}
+
+function scoreValue(value, fallback = 0.5) {
+  const numeric =
+    typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : Number.parseFloat(String(value || ''));
+  if (!Number.isFinite(numeric)) return Math.max(0, Math.min(1, fallback));
+  const scaled = numeric > 1 && numeric <= 100 ? numeric / 100 : numeric;
+  return Math.max(0, Math.min(1, scaled));
 }
 
 function mimeType(fileName) {
@@ -783,6 +1070,8 @@ function appVersionPayload(req) {
     apk_url: apkUrl,
     force_update: env.FORCE_APP_UPDATE === 'true',
     release_notes: [
+      'Adds identity confidence guard with possible plant matches.',
+      'Avoids confident species facts when scan confidence is weak.',
       'Improved pine succulent identification.',
       'Warms PlantVerse cloud on app launch to reduce first-scan lag.',
       'Adds hourly and daily oxygen estimates in Plant Details.',

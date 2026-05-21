@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import 'offline_plant_catalog.dart';
+import 'plant_identity_guard.dart';
 import 'plant_taxonomy_index.dart';
 
 final aiServiceProvider = Provider<AiService>((ref) {
@@ -126,16 +127,16 @@ berries. Coral Beads is not a pine-like succulent.
   }) async {
     if (_backendBaseUrl.isNotEmpty) {
       try {
-        return await _identifyPlantWithBackend(
+        return PlantIdentityGuard.normalize(await _identifyPlantWithBackend(
           imageBytes: imageBytes,
           fileName: fileName,
-        );
+        ));
       } on AiServiceException catch (error) {
-        return _offlineCatalogProfile(
+        return PlantIdentityGuard.normalize(await _offlineCatalogProfile(
           imageBytes: imageBytes,
           fileName: fileName,
           fallbackReason: 'PlantVerse backend unavailable. ${error.message}',
-        );
+        ));
       }
     }
 
@@ -146,13 +147,13 @@ berries. Coral Beads is not a pine-like succulent.
         fileName: fileName,
         fallbackReason: '',
       );
-      if (external != null) return external;
+      if (external != null) return PlantIdentityGuard.normalize(external);
 
-      return _offlineCatalogProfile(
+      return PlantIdentityGuard.normalize(await _offlineCatalogProfile(
         imageBytes: imageBytes,
         fileName: fileName,
         fallbackReason: 'No Gemini key is configured.',
-      );
+      ));
     }
 
     if (!isConfigured) {
@@ -161,13 +162,13 @@ berries. Coral Beads is not a pine-like succulent.
         fileName: fileName,
         fallbackReason: 'No Gemini key is configured.',
       );
-      if (external != null) return external;
+      if (external != null) return PlantIdentityGuard.normalize(external);
 
-      return _offlineCatalogProfile(
+      return PlantIdentityGuard.normalize(await _offlineCatalogProfile(
         imageBytes: imageBytes,
         fileName: fileName,
         fallbackReason: 'No Gemini key is configured.',
-      );
+      ));
     }
 
     try {
@@ -180,7 +181,11 @@ sunlight_requirement, sunlight_score, temperature_range, humidity_level,
 humidity_score, photosynthesis_score, oxygen_output, air_intake, air_release,
 health_summary, story_markdown,
 human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
-environmental_intelligence.
+environmental_intelligence, candidate_matches.
+candidate_matches must be an array of 2-4 possible visual matches. Each item
+must include common_name, scientific_name, confidence, and reason. Include the
+best match first. If confidence is below 0.58, keep the language cautious and
+explain what visible details are missing.
 If the image is not a plant, set common_name to "Unknown" and explain why in description.
 Use confidence, toxicity_score, water_score, sunlight_score, humidity_score, and photosynthesis_score from 0 to 1.
 toxicity_score should be higher when the plant is more toxic to pets or people.
@@ -239,7 +244,7 @@ $_knownVisualConfusionGuidance
 
       final result = _decodeObject(text);
       result.putIfAbsent('recognition_mode', () => 'live_ai');
-      return result;
+      return PlantIdentityGuard.normalize(result);
     } on AiQuotaLimitException catch (error) {
       final reason = 'Gemini limit reached. ${error.message}';
       final external = await _identifyWithExternalProviders(
@@ -247,13 +252,13 @@ $_knownVisualConfusionGuidance
         fileName: fileName,
         fallbackReason: reason,
       );
-      if (external != null) return external;
+      if (external != null) return PlantIdentityGuard.normalize(external);
 
-      return _offlineCatalogProfile(
+      return PlantIdentityGuard.normalize(await _offlineCatalogProfile(
         imageBytes: imageBytes,
         fileName: fileName,
         fallbackReason: reason,
-      );
+      ));
     }
   }
 
@@ -624,10 +629,13 @@ sunlight_requirement, sunlight_score, temperature_range, humidity_level,
 humidity_score, photosynthesis_score, oxygen_output, air_intake, air_release,
 health_summary, story_markdown,
 human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
-environmental_intelligence.
+environmental_intelligence, candidate_matches.
 
 Use confidence, toxicity_score, water_score, sunlight_score, humidity_score,
 and photosynthesis_score from 0 to 1.
+candidate_matches must be an array of 2-4 possible visual matches. Each item
+must include common_name, scientific_name, confidence, and reason. Include the
+best match first and keep low-confidence identities cautious.
 
 human_toxicity must be an object with:
 level, severity_score, touch_effects, ingestion_effects, skin_irritation,
@@ -748,9 +756,11 @@ water_requirement, water_score, sunlight_requirement, sunlight_score,
 temperature_range, humidity_level, humidity_score, photosynthesis_score,
 oxygen_output, air_intake, air_release, health_summary, story_markdown,
 human_toxicity, pet_toxicity, toxic_compounds, care_intelligence,
-environmental_intelligence.
+environmental_intelligence, candidate_matches.
 environmental_intelligence.oxygen must include estimated_hourly_release and
 estimated_daily_release with realistic L/hour and L/day ranges.
+candidate_matches must include 2-4 possible visual matches with common_name,
+scientific_name, confidence, and reason.
 $_knownVisualConfusionGuidance
 Return only raw JSON. No markdown. No code blocks.
 '''
@@ -855,6 +865,7 @@ Return only raw JSON. No markdown. No code blocks.
       family: family,
       genus: genus,
       confidence: confidence,
+      candidateMatches: _plantNetCandidates(results),
     );
     return _maybeEnrichWithPerenual(profile, scientificName);
   }
@@ -946,6 +957,7 @@ Return only raw JSON. No markdown. No code blocks.
       family: family,
       genus: scientificName.split(' ').first,
       confidence: confidence,
+      candidateMatches: _plantIdV3Candidates(suggestions),
     );
     return _maybeEnrichWithPerenual(profile, scientificName);
   }
@@ -1013,6 +1025,7 @@ Return only raw JSON. No markdown. No code blocks.
       family: family,
       genus: scientificName.split(' ').first,
       confidence: confidence,
+      candidateMatches: _plantIdV2Candidates(suggestions),
     );
     return _maybeEnrichWithPerenual(profile, scientificName);
   }
@@ -1025,6 +1038,7 @@ Return only raw JSON. No markdown. No code blocks.
     required String family,
     required String genus,
     required double confidence,
+    List<Map<String, dynamic>> candidateMatches = const [],
   }) {
     final profile = PlantTaxonomyIndex.taxonomyProfile({
       'canonicalName': scientificName,
@@ -1042,11 +1056,87 @@ Return only raw JSON. No markdown. No code blocks.
       ...profile,
       'confidence': confidence,
       'recognition_mode': 'external_api',
+      'candidate_matches': candidateMatches,
       'reference_sources': [
         '$provider plant identification result: $sourceUrl',
         ...((profile['reference_sources'] as List?) ?? const []),
       ],
     };
+  }
+
+  List<Map<String, dynamic>> _plantNetCandidates(Object? results) {
+    if (results is! List) return const [];
+    return results.whereType<Map>().take(4).map((item) {
+      final species = (item['species'] as Map?)?.cast<String, dynamic>() ?? {};
+      final names = species['commonNames'] is List
+          ? (species['commonNames'] as List)
+              .map((value) => value.toString().trim())
+              .where((value) => value.isNotEmpty)
+              .toList()
+          : const <String>[];
+      final scientific = _cleanText(
+        species['scientificNameWithoutAuthor'] ?? species['scientificName'],
+      );
+      return {
+        'common_name': names.isNotEmpty ? names.first : scientific,
+        'scientific_name': scientific,
+        'confidence': (item['score'] is num)
+            ? (item['score'] as num).clamp(0, 1).toDouble()
+            : 0.0,
+        'reason': 'Pl@ntNet visual candidate',
+      };
+    }).where((item) {
+      return _cleanText(item['common_name']).isNotEmpty ||
+          _cleanText(item['scientific_name']).isNotEmpty;
+    }).toList(growable: false);
+  }
+
+  List<Map<String, dynamic>> _plantIdV3Candidates(Object? suggestions) {
+    if (suggestions is! List) return const [];
+    return suggestions
+        .whereType<Map>()
+        .take(4)
+        .map((item) {
+          final scientific = _cleanText(item['name']);
+          return {
+            'common_name': scientific,
+            'scientific_name': scientific,
+            'confidence': (item['probability'] is num)
+                ? (item['probability'] as num).clamp(0, 1).toDouble()
+                : 0.0,
+            'reason': 'Plant.id visual candidate',
+          };
+        })
+        .where((item) => _cleanText(item['scientific_name']).isNotEmpty)
+        .toList(
+          growable: false,
+        );
+  }
+
+  List<Map<String, dynamic>> _plantIdV2Candidates(Object? suggestions) {
+    if (suggestions is! List) return const [];
+    return suggestions.whereType<Map>().take(4).map((item) {
+      final scientific = _cleanText(item['plant_name']);
+      final details =
+          (item['plant_details'] as Map?)?.cast<String, dynamic>() ?? {};
+      final commonNames = details['common_names'] is List
+          ? (details['common_names'] as List)
+              .map((value) => value.toString().trim())
+              .where((value) => value.isNotEmpty)
+              .toList()
+          : const <String>[];
+      return {
+        'common_name': commonNames.isNotEmpty ? commonNames.first : scientific,
+        'scientific_name': scientific,
+        'confidence': (item['probability'] is num)
+            ? (item['probability'] as num).clamp(0, 1).toDouble()
+            : 0.0,
+        'reason': 'Plant.id visual candidate',
+      };
+    }).where((item) {
+      return _cleanText(item['common_name']).isNotEmpty ||
+          _cleanText(item['scientific_name']).isNotEmpty;
+    }).toList(growable: false);
   }
 
   Future<Map<String, dynamic>> _maybeEnrichWithPerenual(

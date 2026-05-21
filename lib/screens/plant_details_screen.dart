@@ -10,6 +10,7 @@ import '../animations/staggered_reveal.dart';
 import '../core/constants/app_colors.dart';
 import '../core/performance/performance_mode.dart';
 import '../features/plant_details/plant_biology_metrics.dart';
+import '../services/plant_identity_guard.dart';
 import '../services/scan_result_store.dart';
 import '../widgets/immersive_background.dart';
 
@@ -86,7 +87,54 @@ class PlantDetailsScreen extends ConsumerWidget {
   String get _humidityLevel => _value('humidity_level', 'Moderate humidity');
   String get _recognitionMode => _value('recognition_mode', 'live_ai');
   String get _fallbackReason => _value('fallback_reason', '');
+  String get _identityStatus {
+    final status = _value('identity_status', '');
+    if (status.isNotEmpty) return status;
+    if (_recognitionMode == 'offline_general') {
+      return PlantIdentityGuard.unconfirmed;
+    }
+    if (_recognitionMode == 'offline_taxonomy') {
+      return PlantIdentityGuard.needsConfirmation;
+    }
+    if (_confidence >= 0.78) return PlantIdentityGuard.confirmed;
+    if (_confidence >= 0.58) return PlantIdentityGuard.likely;
+    if (_confidence >= 0.40) return PlantIdentityGuard.needsConfirmation;
+    return PlantIdentityGuard.unconfirmed;
+  }
+
+  String get _identityStatusLabel => _value(
+        'identity_status_label',
+        _identityStatus == PlantIdentityGuard.confirmed
+            ? '${(_confidence * 100).toStringAsFixed(0)}% confirmed'
+            : _identityStatus == PlantIdentityGuard.likely
+                ? '${(_confidence * 100).toStringAsFixed(0)}% likely match'
+                : _identityStatus == PlantIdentityGuard.needsConfirmation
+                    ? 'Needs confirmation'
+                    : 'Unconfirmed plant',
+      );
+
+  String get _identityWarning => _value(
+        'identity_warning',
+        _identityStatus == PlantIdentityGuard.confirmed
+            ? 'Strong identity signal from the scan.'
+            : 'PlantVerse is keeping this identity cautious until the visible leaf, stem, and growth habit are clearer.',
+      );
+
+  Color get _identityColor {
+    if (_identityStatus == PlantIdentityGuard.confirmed) {
+      return AppColors.emeraldGreen;
+    }
+    if (_identityStatus == PlantIdentityGuard.likely) {
+      return AppColors.actionBlueOnDark;
+    }
+    if (_identityStatus == PlantIdentityGuard.needsConfirmation) {
+      return AppColors.warningYellow;
+    }
+    return AppColors.softRed;
+  }
+
   String get _confidenceLabel {
+    if (_identityStatusLabel.isNotEmpty) return _identityStatusLabel;
     if (_recognitionMode == 'offline_general') return 'General fallback';
     if (_recognitionMode == 'offline_catalog') return 'Offline catalog';
     if (_recognitionMode == 'offline_taxonomy') return '10k taxonomy';
@@ -106,6 +154,18 @@ class PlantDetailsScreen extends ConsumerWidget {
   double get _photosynthesisScore => _nestedScore(
       ['environmental_intelligence', 'oxygen', 'score'],
       _score('photosynthesis_score', _confidence));
+
+  List<Map<String, dynamic>> get _candidateMatches {
+    final value = result?['candidate_matches'];
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .where((item) {
+      return _candidateText(item, 'common_name').isNotEmpty ||
+          _candidateText(item, 'scientific_name').isNotEmpty;
+    }).toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -325,57 +385,220 @@ class PlantDetailsScreen extends ConsumerWidget {
   }
 
   Widget _confidenceCard() {
+    final candidates = _candidateMatches;
     return _InteractiveScienceCard(
-      glowColor: AppColors.actionBlueOnDark,
+      glowColor: _identityColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _ScienceRing(
+                score: _confidence,
+                color: _identityColor,
+                label: 'AI',
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sectionEyebrow('Scan interpretation'),
+                    const SizedBox(height: 7),
+                    const Text(
+                      'Scan interpretation',
+                      style: TextStyle(
+                        color: AppColors.pureWhite,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _identityPill(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            _value(
+              'health_summary',
+              _value(
+                'description',
+                'Gemini analyzed visible structure, leaf texture, and care signals from your scan.',
+              ),
+            ),
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.pureWhite.withOpacity(0.68),
+              height: 1.42,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _identityWarningCard(),
+          if (candidates.isNotEmpty &&
+              (_identityStatus != PlantIdentityGuard.confirmed ||
+                  candidates.length > 1)) ...[
+            const SizedBox(height: 14),
+            _candidateMatchesPanel(candidates),
+          ],
+          if (_fallbackReason.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              _fallbackReason,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.warningYellow.withOpacity(0.92),
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _identityPill() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _identityColor.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _identityColor.withOpacity(0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _identityStatus == PlantIdentityGuard.confirmed
+                ? Icons.verified_rounded
+                : _identityStatus == PlantIdentityGuard.unconfirmed
+                    ? Icons.help_rounded
+                    : Icons.manage_search_rounded,
+            color: _identityColor,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              _identityStatusLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _identityColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _identityWarningCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: _identityColor.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _identityColor.withOpacity(0.20)),
+      ),
+      child: Text(
+        _identityWarning,
+        style: TextStyle(
+          color: AppColors.pureWhite.withOpacity(0.74),
+          height: 1.35,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _candidateMatchesPanel(List<Map<String, dynamic>> candidates) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionEyebrow('Possible matches'),
+        const SizedBox(height: 10),
+        ...candidates.take(3).map(
+              (candidate) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _candidateMatchTile(candidate),
+              ),
+            ),
+      ],
+    );
+  }
+
+  Widget _candidateMatchTile(Map<String, dynamic> candidate) {
+    final common = _candidateText(candidate, 'common_name');
+    final scientific = _candidateText(candidate, 'scientific_name');
+    final reason = _candidateText(candidate, 'reason');
+    final score = _candidateScore(candidate);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.pureWhite.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.pureWhite.withOpacity(0.08)),
+      ),
       child: Row(
         children: [
           _ScienceRing(
-            score: _confidence,
-            color: AppColors.actionBlueOnDark,
-            label: 'AI',
+            score: score,
+            color: score >= 0.58
+                ? AppColors.emeraldGreen
+                : AppColors.warningYellow,
+            label: '',
+            size: 46,
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _sectionEyebrow('Scan interpretation'),
-                const SizedBox(height: 7),
-                const Text(
-                  'Scan interpretation',
-                  style: TextStyle(
+                Text(
+                  common.isNotEmpty ? common : scientific,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
                     color: AppColors.pureWhite,
-                    fontSize: 22,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _value(
-                    'health_summary',
-                    _value(
-                      'description',
-                      'Gemini analyzed visible structure, leaf texture, and care signals from your scan.',
+                if (scientific.isNotEmpty && scientific != common) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    scientific,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.actionBlueOnDark,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.pureWhite.withOpacity(0.68),
-                    height: 1.42,
-                  ),
-                ),
-                if (_fallbackReason.isNotEmpty) ...[
-                  const SizedBox(height: 10),
+                ],
+                if (reason.isNotEmpty) ...[
+                  const SizedBox(height: 4),
                   Text(
-                    _fallbackReason,
-                    maxLines: 3,
+                    reason,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: AppColors.warningYellow.withOpacity(0.92),
-                      height: 1.35,
-                      fontWeight: FontWeight.w700,
+                      color: AppColors.pureWhite.withOpacity(0.58),
+                      fontSize: 12,
+                      height: 1.25,
                     ),
                   ),
                 ],
@@ -1644,6 +1867,22 @@ class PlantDetailsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _candidateText(Map<String, dynamic> candidate, String key) {
+    final value = candidate[key];
+    final text = value?.toString().trim() ?? '';
+    return text;
+  }
+
+  double _candidateScore(Map<String, dynamic> candidate) {
+    final value = candidate['confidence'];
+    if (value is num) return value.clamp(0, 1).toDouble();
+    final parsed = double.tryParse(value?.toString() ?? '');
+    if (parsed == null) return 0;
+    return (parsed > 1 && parsed <= 100 ? parsed / 100 : parsed)
+        .clamp(0, 1)
+        .toDouble();
   }
 
   BoxDecoration _cardDecoration(Color accent) {
