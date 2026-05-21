@@ -33,7 +33,7 @@ class AppUpdateService {
   static const _definedBackendBaseUrl =
       String.fromEnvironment('BACKEND_BASE_URL');
   static const _defaultPublicBackendBaseUrl =
-      'https://plantverse-ai.onrender.com';
+      'https://dj2i5my9uyve1.cloudfront.net';
   static const _currentVersionCode =
       int.fromEnvironment('APP_VERSION_CODE', defaultValue: 1);
   static const _currentVersionName =

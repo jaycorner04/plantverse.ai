@@ -39,7 +39,7 @@ class AiService {
   static const _definedBackendBaseUrl =
       String.fromEnvironment('BACKEND_BASE_URL');
   static const _defaultPublicBackendBaseUrl =
-      'https://plantverse-ai.onrender.com';
+      'https://dj2i5my9uyve1.cloudfront.net';
   static const _knownVisualConfusionGuidance = '''
 
 Known visual confusion rule:

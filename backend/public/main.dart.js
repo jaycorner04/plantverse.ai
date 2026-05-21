@@ -92410,7 +92410,7 @@ return s.length!==0?s:B.c.bQ(b)},
 goo(){var s,r=this.dB("BACKEND_BASE_URL",""),q=A.aQ("/+$",!0,!1,!1),p=A.bN(r,q,"")
 if(p.length!==0)return p
 s=this.al9()
-return s.length!==0?s:"https://plantverse-ai.onrender.com"},
+return s.length!==0?s:"https://dj2i5my9uyve1.cloudfront.net"},
 al9(){var s,r=A.Sh()
 if(r.gdZ()!=="http"&&r.gdZ()!=="https")return""
 if(r.gm7().length===0)return""
