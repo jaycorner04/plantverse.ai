@@ -39,90 +39,20 @@
       margin: 0;
       overflow: hidden;
     }
-
-    #plantverse-loader {
-      background: #cfcfcf;
-      inset: 0;
-      overflow: hidden;
-      position: fixed;
-      transition:
-        opacity 760ms cubic-bezier(0.22, 1, 0.36, 1),
-        filter 760ms cubic-bezier(0.22, 1, 0.36, 1);
-      z-index: 9999;
-    }
-
-    #plantverse-loader.loader-exit {
-      filter: blur(16px);
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    #abhi-intro-video {
-      background: #cfcfcf;
-      height: 100%;
-      inset: 0;
-      object-fit: cover;
-      position: absolute;
-      width: 100%;
-    }
   </style>
 
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter.js" defer></script>
 </head>
 <body>
-  <div id="plantverse-loader" aria-label="Abhi intro">
-    <video
-      id="abhi-intro-video"
-      autoplay
-      muted
-      playsinline
-      poster="intro/abhi-intro-poster-v3.jpg"
-      preload="auto"
-      src="intro/abhi-intro-abhi-v3.mp4"
-    ></video>
-  </div>
   <script>
     window.addEventListener('load', function(ev) {
-      const loader = document.getElementById('plantverse-loader');
-      const video = document.getElementById('abhi-intro-video');
-      const introMs = 5470;
-      const start = performance.now();
-
-      const introDone = new Promise(function(resolve) {
-        let resolved = false;
-        function finish() {
-          if (resolved) return;
-          resolved = true;
-          resolve();
+      _flutter.loader.loadEntrypoint({
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
         }
-        video?.addEventListener('ended', finish, { once: true });
-        setTimeout(finish, introMs + 900);
-      });
-
-      video?.play?.().catch(function() {});
-
-      const appReady = new Promise(function(resolve) {
-        _flutter.loader.loadEntrypoint({
-          onEntrypointLoaded: function(engineInitializer) {
-            engineInitializer.initializeEngine().then(resolve);
-          }
-        });
-      });
-
-      Promise.all([
-        appReady,
-        introDone,
-        new Promise(function(resolve) {
-          setTimeout(resolve, Math.max(0, introMs - (performance.now() - start)));
-        })
-      ]).then(function(results) {
-        const appRunner = results[0];
-        appRunner.runApp();
-        requestAnimationFrame(function() {
-          loader?.classList.add('loader-exit');
-          setTimeout(function() { loader?.remove(); }, 820);
-        });
       });
     });
   </script>
