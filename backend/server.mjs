@@ -109,7 +109,7 @@ const server = http.createServer(async (req, res) => {
         ok: true,
         service: 'PlantVerse AI backend',
         providers: {
-          gemini: Boolean(env.GEMINI_API_KEY),
+          gemini: configuredGeminiKeys().length > 0,
           groq: Boolean(env.GROQ_API_KEY),
           openrouter: Boolean(env.OPENROUTER_API_KEY),
           plantnet: Boolean(env.PLANTNET_API_KEY),
@@ -166,7 +166,7 @@ async function identifyPlant({ imageBase64, fileName }) {
   const failures = [];
   let fallbackReason = '';
 
-  if (env.GEMINI_API_KEY) {
+  if (configuredGeminiKeys().length > 0) {
     try {
       const content = await generateGemini({
         prompt: plantProfilePrompt,
@@ -203,7 +203,7 @@ async function identifyPlant({ imageBase64, fileName }) {
 async function diagnoseDisease({ imageBase64, fileName }) {
   const failures = [];
 
-  if (env.GEMINI_API_KEY) {
+  if (configuredGeminiKeys().length > 0) {
     try {
       return decodeObject(
         await generateGemini({
@@ -343,47 +343,71 @@ async function identifyWithExternalProviders({
 async function generateGemini({ prompt, imageBase64, fileName }) {
   const model = env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': env.GEMINI_API_KEY,
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            {
-              inline_data: {
-                mime_type: mimeType(fileName),
-                data: imageBase64,
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.25,
+  const keys = configuredGeminiKeys();
+  let lastError = null;
+
+  for (const apiKey of keys) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
       },
-    }),
-  });
-
-  if (!response.ok) {
-    const message = await providerErrorMessage(response, 'Gemini');
-    throw new ProviderError('Gemini', message, {
-      status: response.status,
-      quota: isQuotaLimit(response.status, message),
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: mimeType(fileName),
+                  data: imageBase64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.25,
+        },
+      }),
     });
+
+    if (!response.ok) {
+      const message = await providerErrorMessage(response, 'Gemini');
+      const error = new ProviderError('Gemini', message, {
+        status: response.status,
+        quota: isQuotaLimit(response.status, message),
+      });
+      lastError = error;
+      if (shouldTryNextGeminiKey(error)) continue;
+      throw error;
+    }
+
+    const data = await response.json();
+    const text = extractGeminiText(data);
+    if (!text.trim()) {
+      throw new ProviderError('Gemini', 'Gemini returned an empty answer.');
+    }
+    return text;
   }
 
-  const data = await response.json();
-  const text = extractGeminiText(data);
-  if (!text.trim()) {
-    throw new ProviderError('Gemini', 'Gemini returned an empty answer.');
-  }
-  return text;
+  throw lastError || new ProviderError('Gemini', 'No Gemini API key is configured.');
+}
+
+function configuredGeminiKeys() {
+  return [
+    ...(env.GEMINI_API_KEYS || '')
+      .split(/[\n,]+/)
+      .map((key) => key.trim())
+      .filter(Boolean),
+    ...(env.GEMINI_API_KEY ? [env.GEMINI_API_KEY.trim()] : []),
+  ].filter((key, index, keys) => key && keys.indexOf(key) === index);
+}
+
+function shouldTryNextGeminiKey(error) {
+  return error.quota || error.status === 401 || error.status === 403;
 }
 
 async function openAiVisionCompletion({

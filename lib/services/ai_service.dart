@@ -29,6 +29,7 @@ class AiQuotaLimitException extends AiServiceException {
 
 class AiService {
   static const _definedApiKey = String.fromEnvironment('GEMINI_API_KEY');
+  static const _definedApiKeys = String.fromEnvironment('GEMINI_API_KEYS');
   static const _definedModel = String.fromEnvironment('GEMINI_MODEL');
   static const _definedPlantNetKey = String.fromEnvironment('PLANTNET_API_KEY');
   static const _definedPlantIdKey = String.fromEnvironment('PLANT_ID_API_KEY');
@@ -58,7 +59,26 @@ berries. Coral Beads is not a pine-like succulent.
     return runtimeValue.isNotEmpty ? runtimeValue : definedValue.trim();
   }
 
-  String get _apiKey => _envValue('GEMINI_API_KEY', _definedApiKey);
+  List<String> _splitKeys(String value) {
+    return value
+        .split(RegExp(r'[\n,]+'))
+        .map((key) => key.trim())
+        .where((key) => key.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  List<String> get _apiKeys {
+    final values = <String>[
+      ..._splitKeys(_envValue('GEMINI_API_KEYS', _definedApiKeys)),
+      _envValue('GEMINI_API_KEY', _definedApiKey),
+    ];
+    final seen = <String>{};
+    return values
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty && seen.add(value))
+        .toList(growable: false);
+  }
+
   String get _plantNetApiKey =>
       _envValue('PLANTNET_API_KEY', _definedPlantNetKey);
   String get _plantIdApiKey =>
@@ -100,7 +120,7 @@ berries. Coral Beads is not a pine-like succulent.
     return definedModel.isNotEmpty ? definedModel : 'gemini-2.0-flash-lite';
   }
 
-  bool get isConfigured => _apiKey.isNotEmpty;
+  bool get isConfigured => _apiKeys.isNotEmpty;
   bool get usesBackend => _backendBaseUrl.isNotEmpty;
   bool get hasLiveProvider =>
       _backendBaseUrl.isNotEmpty ||
@@ -140,7 +160,7 @@ berries. Coral Beads is not a pine-like succulent.
       }
     }
 
-    if (_apiKey.isEmpty &&
+    if (!isConfigured &&
         (_groqApiKey.isNotEmpty || _openRouterApiKey.isNotEmpty)) {
       final external = await _identifyWithExternalProviders(
         imageBytes: imageBytes,
@@ -427,29 +447,37 @@ Use confidence from 0 to 1.
 
     final endpoint =
         'https://generativelanguage.googleapis.com/v1beta/models/$_model:generateContent';
-    final response = await http.post(
-      Uri.parse(endpoint),
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': _apiKey,
-      },
-      body: jsonEncode(payload),
-    );
+    AiServiceException? lastError;
+    for (final apiKey in _apiKeys) {
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: jsonEncode(payload),
+      );
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = _geminiError(response);
-      if (_isQuotaLimit(response.statusCode, message)) {
-        throw AiQuotaLimitException(message);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final message = _geminiError(response);
+        final error = _isQuotaLimit(response.statusCode, message)
+            ? AiQuotaLimitException(message)
+            : AiServiceException(message);
+        lastError = error;
+        if (_shouldTryNextGeminiKey(response.statusCode, error)) continue;
+        throw error;
       }
-      throw AiServiceException(message);
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final output = _extractOutputText(data).trim();
+      if (output.isEmpty) {
+        throw const AiServiceException('Gemini returned an empty answer.');
+      }
+      return output;
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final output = _extractOutputText(data).trim();
-    if (output.isEmpty) {
-      throw const AiServiceException('Gemini returned an empty answer.');
-    }
-    return output;
+    throw lastError ??
+        const AiServiceException('No Gemini API key is configured.');
   }
 
   void _ensureConfigured() {
@@ -532,6 +560,12 @@ Use confidence from 0 to 1.
         lower.contains('quota') ||
         lower.contains('rate limit') ||
         lower.contains('too many requests');
+  }
+
+  bool _shouldTryNextGeminiKey(int statusCode, AiServiceException error) {
+    return error is AiQuotaLimitException ||
+        statusCode == 401 ||
+        statusCode == 403;
   }
 
   Future<Map<String, dynamic>?> _identifyWithExternalProviders({
